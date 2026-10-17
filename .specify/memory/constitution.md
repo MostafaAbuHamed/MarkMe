@@ -1,5 +1,12 @@
 <!--
-Sync Impact Report
+Sync Impact Report (1.1.1, 2026-10-18)
+- Version change: 1.1.0 → 1.1.1 (PATCH, approved by Mostafa)
+- Technology Constraints, Auth: "users may use the app before confirming email" replaced by
+  "confirm email before first password sign-in". Reason: Supabase's password grant rejects
+  unconfirmed emails (spike S0 Q3). PRD US-1 changed in the same change (decision A7).
+- Principles: unchanged.
+
+Sync Impact Report (1.1.0)
 - Version change: template (unversioned) → 1.1.0
   (version supplied by Mostafa; first written constitution in this repo)
 - Principles defined:
@@ -103,7 +110,8 @@ and a spec disagree, this constitution wins until amended.
 - Data and auth: Supabase (Postgres, Auth, Realtime). Supabase Cloud free plan in production;
   Supabase CLI + Docker locally.
 - Auth: email + password and Google sign-in (extension uses `chrome.identity.launchWebAuthFlow`);
-  users may use the app before confirming email.
+  users confirm their email before their first password sign-in (Supabase does not allow
+  unconfirmed password sign-in; spike S0 Q3).
 - Search: PostgreSQL full-text search over title, description, note, URL and tag names.
 - Stay within free tiers; any paid service needs Mostafa's approval.
 
@@ -130,4 +138,4 @@ and a spec disagree, this constitution wins until amended.
 - Reviews check compliance; unjustified complexity is rejected.
 - Runtime guidance for agents lives in `CLAUDE.md`, which must not contradict this document.
 
-**Version**: 1.1.0 | **Ratified**: 2026-10-17 | **Last Amended**: 2026-10-17
+**Version**: 1.1.1 | **Ratified**: 2026-10-17 | **Last Amended**: 2026-10-18

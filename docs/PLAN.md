@@ -5,7 +5,7 @@
 | Owner | Mostafa |
 | Status | Draft v1.2 |
 | Date | 2026-10-17 |
-| Input | [PRD.md](PRD.md) (approved), [constitution](../.specify/memory/constitution.md) v1.1.0 |
+| Input | [PRD.md](PRD.md) (approved), [constitution](../.specify/memory/constitution.md) v1.1.1 |
 | Detail | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): technical design per milestone |
 
 ## 1. How we work
@@ -15,7 +15,7 @@
 - One branch per milestone. Each Spec Kit task gets one commit and one PR into the milestone branch, with CI green. The milestone branch merges to `main` only when its exit criteria pass in CI.
 - UI milestones use the **frontend-design** and **impeccable** skills.
 - Milestones run in order; a milestone starts only after its dependencies are merged.
-- The constitution (v1.1.0) is ratified and binding. Change it only through its Governance section.
+- The constitution (v1.1.1) is ratified and binding. Change it only through its Governance section.
 
 ### Definition of done (every milestone)
 

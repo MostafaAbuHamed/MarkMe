@@ -3,7 +3,7 @@
 | | |
 | --- | --- |
 | Owner | Mostafa |
-| Status | Draft v1.0 |
+| Status | Draft v1.1 |
 | Date | 2026-10-17 |
 | Source of truth | Mostafa's project brief + approved decisions (2026-10-17) |
 
@@ -87,7 +87,7 @@ packages/
 | Entity | Key fields | Notes |
 | --- | --- | --- |
 | `profiles` | `id` (= auth user id), `display_name`, `created_at` | Created on sign-up. |
-| `items` | `id`, `user_id`, `url`, `normalized_url`, `title`, `description`, `image_url`, `site_name`, `media_type` (article/video/image/post/link), `embed_html`, `folder_id?`, `note?`, `preview_status` (pending/ok/failed), `preview_fetched_at`, `created_at`, `updated_at`, `search_vector` | Unique (`user_id`, `normalized_url`). |
+| `items` | `id`, `user_id`, `url`, `normalized_url`, `title`, `description`, `image_url`, `site_name`, `media_type` (article/video/image/post/link), `embed_html`, `favicon_url?`, `folder_id?`, `note?`, `preview_status` (pending/ok/failed), `preview_fetched_at`, `created_at`, `updated_at`, `search_vector` | Unique (`user_id`, `normalized_url`). |
 | `folders` | `id`, `user_id`, `name`, `created_at` | Unique (`user_id`, lower(`name`)). Flat in v1. |
 | `tags` | `id`, `user_id`, `name` | Unique (`user_id`, lower(`name`)). |
 | `item_tags` | `item_id`, `tag_id` | Many-to-many. |
@@ -103,11 +103,11 @@ packages/
 **Auth**
 - **US-1 Sign up:** As a new user I can register with email and password.
   - Validation errors shown inline; password min 8 chars.
-  - I am signed in immediately and can use the app before confirming my email.
-  - Until confirmed, a non-blocking banner says my email is not verified, with a "Resend email" action. The banner disappears once confirmed.
+  - After signing up I am asked to confirm my email; I can sign in once it is confirmed. Supabase does not allow password sign-in with an unconfirmed email (spike S0 Q3).
+  - The confirm-email screen, and a sign-in attempt with an unconfirmed email, offer a "Resend email" action.
 - **US-1b Google sign-in:** I can sign up or sign in with my Google account in one click.
   - Uses Supabase Google OAuth via `chrome.identity.launchWebAuthFlow` with the extension redirect URL.
-  - A Google sign-in with an email that already has a password account links to the same user (no duplicate accounts).
+  - A Google sign-in with an email that already has a password account links to the same user (no duplicate accounts). If that password account was never confirmed, Supabase drops its password; the user can set one again via password reset.
 - **US-2 Sign in / out:** I can sign in and stay signed in across browser restarts; I can sign out, which clears the session from extension storage.
 - **US-3 Session storage:** session is kept in `chrome.storage` via a custom Supabase storage adapter, shared by popup, side panel and background worker.
 
@@ -127,7 +127,7 @@ packages/
 
 **Browsing and search**
 - **US-11 List:** I see my items, newest first, paginated (infinite scroll, 20 per page).
-- **US-12 Filter:** I can filter by folder and by one or more tags.
+- **US-12 Filter:** I can filter by folder and by one or more tags. With several tags selected, an item must have **all** of them.
 - **US-13 Search:** I can search by text; results come from PostgreSQL FTS over title, description, my description (`note`), URL and tag names, ranked by relevance. Search combines with filters.
 - **US-14 Item detail:** open the original link, edit title and my description, change folder, edit tags, delete item (with confirm).
 
@@ -236,3 +236,7 @@ packages/
 1. Review and approve this PRD.
 2. Convert v1 into Spec Kit specs (setup/monorepo, database + RLS, preview API, extension auth, save flow, library/search, organization).
 3. Execute specs on Mostafa's machine.
+
+## Changelog
+- v1.1 (2026-10-18): approved IMPLEMENTATION_PLAN §4 decisions A1 (`items.favicon_url`, filled by the preview API), A3 (multi-tag filter = all selected tags) and A7 option (a) (US-1: confirm email before first sign-in, per spike S0 Q3); US-1b notes the S0 Q4 linking behavior.
+- v1.0 (2026-10-17): approved.
