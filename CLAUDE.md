@@ -16,6 +16,8 @@ preview API and the extension dev build. It must keep working after every merge.
 - `.specify/memory/constitution.md` — binding rules. Wins over any spec, plan or this file.
 - `docs/PRD.md` — requirements, domain model (section 6), SSRF rules (7.3), required tests (7.5).
 - `docs/PLAN.md` — milestones M0–M8 for v1, their dependencies and exit criteria.
+- `docs/IMPLEMENTATION_PLAN.md` — technical design, tasks and tests per v1 milestone; spike S0;
+  open decisions needing approval (§4).
 - `docs/PROJECT_BRIEF.md` — original brief.
 
 ## Workflow

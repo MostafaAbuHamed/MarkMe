@@ -3,9 +3,10 @@
 | | |
 | --- | --- |
 | Owner | Mostafa |
-| Status | Draft v1.1 |
+| Status | Draft v1.2 |
 | Date | 2026-10-17 |
 | Input | [PRD.md](PRD.md) (approved), [constitution](../.specify/memory/constitution.md) v1.1.0 |
+| Detail | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): technical design per milestone |
 
 ## 1. How we work
 
@@ -170,5 +171,6 @@ M3 needs JWT verification, not the schema; if it helps, it can depend on M0 + M2
 Run the OAuth/oEmbed spike, and write the `/speckit-specify` input for **M0 Monorepo foundation**, then each milestone in order.
 
 ## Changelog
+- v1.2 (2026-10-17): linked IMPLEMENTATION_PLAN.md (technical design, tasks, spike S0 steps).
 - v1.1 (2026-10-17): fixed M1 coverage; added common definition of done, secrets and DB-test CI to M0, early cloud deploys (M1, M3), pre-M4 spike, background-worker preview flow, pinned extension ID, earlier E2E and a11y checks, measurable perf exits, unpacked-only release, new risks.
 - v1.0 (2026-10-17): first draft.
