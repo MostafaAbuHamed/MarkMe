@@ -1,0 +1,55 @@
+# Dependencies
+node_modules/
+.pnpm-store/
+
+# Builds
+dist/
+dist-ssr/
+build/
+out/
+.output/
+.wxt/
+.turbo/
+.cache/
+*.tsbuildinfo
+next-env.d.ts
+.open-next/
+.wrangler/
+.expo/
+.expo-shared/
+
+# Tests
+coverage/
+.nyc_output/
+playwright-report/
+test-results/
+blob-report/
+
+# Secrets — commit *.env.example only
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Supabase local state (migrations and config.toml stay tracked)
+supabase/.temp/
+supabase/.branches/
+
+# Logs
+*.log
+npm-debug.log*
+pnpm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+
+# OS and editors
+.DS_Store
+Thumbs.db
+.vscode/
+.idea/
+*.swp
+*.tmp
+
+# Machine-local agent settings
+.claude/settings.local.json
