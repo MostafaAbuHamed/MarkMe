@@ -8,7 +8,8 @@
     "build": "wxt build",
     "postinstall": "wxt prepare",
     "lint": "eslint .",
-    "typecheck": "wxt prepare && tsc --noEmit"
+    "typecheck": "wxt prepare && tsc --noEmit",
+    "test": "vitest run"
   },
   "dependencies": {
     "@markme/domain": "workspace:*",

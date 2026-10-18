@@ -400,7 +400,7 @@ extension build) with one message naming every bad key, with no values (SC-005, 
   - Both bad at once → one error listing both.
   - The message contains `apps/preview-api/.env.example`.
   - Invalid values never appear in the message.
-- [ ] T027 [P] [US3] Write `apps/extension/src/lib/env.test.ts` against `extensionEnvSchema` via
+- [x] T027 [P] [US3] Write `apps/extension/src/lib/env.test.ts` against `extensionEnvSchema` via
       `parseEnv`:
   - Each of `WXT_SUPABASE_URL`, `WXT_SUPABASE_ANON_KEY` and `WXT_PREVIEW_API_URL` is tested
     missing and invalid. The anon key's invalid case is `replace-with-local-anon-key`; the
