@@ -238,7 +238,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
   - `apps/preview-api/.env.example` contains `PORT=8787` and
     `SUPABASE_URL=http://127.0.0.1:54321`, each with a one-line comment.
   - Proof: the T011 tests pass.
-- [ ] T014 [P] [US1] Create `apps/extension` (`@markme/extension`, private):
+- [x] T014 [P] [US1] Create `apps/extension` (`@markme/extension`, private):
   - `package.json`:
     - dependencies `react`, `react-dom`, `@markme/domain` (`workspace:*`), `zod`.
     - devDependencies `wxt`, `@wxt-dev/module-react`, `@types/react`, `@types/react-dom`,
@@ -248,7 +248,8 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
   - `apps/extension/src/lib/env.ts`: the zod object from contracts/app-config.md, with each
     `.describe()` verbatim:
     - `WXT_SUPABASE_URL`: `z.url({ protocol: /^https?$/ })`.
-    - `WXT_SUPABASE_ANON_KEY`: `z.string().min(20)`.
+    - `WXT_SUPABASE_ANON_KEY`: `z.string().min(20)` plus a refine that rejects any
+      `replace-with-…` value.
     - `WXT_PREVIEW_API_URL`: `z.url({ protocol: /^https?$/ })`.
     - All are required. **No other key** (FR-022).
     - Export the schema as `extensionEnvSchema`, plus `env = parseEnv(extensionEnvSchema,
@@ -402,8 +403,8 @@ extension build) with one message naming every bad key, with no values (SC-005, 
 - [ ] T027 [P] [US3] Write `apps/extension/src/lib/env.test.ts` against `extensionEnvSchema` via
       `parseEnv`:
   - Each of `WXT_SUPABASE_URL`, `WXT_SUPABASE_ANON_KEY` and `WXT_PREVIEW_API_URL` is tested
-    missing and invalid. The anon key's invalid case is `replace-with-local-anon-key`, which has
-    fewer than 20 characters.
+    missing and invalid. The anon key's invalid case is `replace-with-local-anon-key`; the
+    placeholder is rejected by the refine.
   - All three bad at once → one error with three issues.
   - **Key-set lock**:
     `expect(Object.keys(extensionEnvSchema.shape).sort()).toEqual(["WXT_PREVIEW_API_URL",
