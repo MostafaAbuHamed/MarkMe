@@ -1,0 +1,8 @@
+title = "markme"
+
+[extend]
+useDefault = true
+
+[[allowlists]]
+description = "placeholder values in .env.example"
+regexes = ['''replace-with-[a-z0-9-]+''']
