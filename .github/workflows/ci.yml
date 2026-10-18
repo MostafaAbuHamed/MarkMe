@@ -87,3 +87,52 @@ jobs:
         run: pnpm db:types
       - name: Check generated types are committed
         run: git diff --exit-code packages/database/src/types.gen.ts
+
+  secrets:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Install gitleaks 8.30.1
+        env:
+          GITLEAKS_VERSION: 8.30.1
+        run: |
+          set -euo pipefail
+          cd "${RUNNER_TEMP}"
+          curl -fsSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz"
+          curl -fsSLO "https://github.com/gitleaks/gitleaks/releases/download/v${GITLEAKS_VERSION}/gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          grep " gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz$" "gitleaks_${GITLEAKS_VERSION}_checksums.txt" | sha256sum --check
+          sha256sum --check --ignore-missing "gitleaks_${GITLEAKS_VERSION}_checksums.txt"
+          tar -xzf "gitleaks_${GITLEAKS_VERSION}_linux_x64.tar.gz" gitleaks
+          echo "${RUNNER_TEMP}" >> "${GITHUB_PATH}"
+
+      - name: Scan commits for secrets
+        env:
+          EVENT_NAME: ${{ github.event_name }}
+          BASE: ${{ github.event_name == 'pull_request' && github.event.pull_request.base.sha || '' }}
+          HEAD: ${{ github.event_name == 'pull_request' && github.event.pull_request.head.sha || '' }}
+          BEFORE: ${{ github.event_name == 'push' && github.event.before || '' }}
+          SHA: ${{ github.sha }}
+        run: |
+          set -euo pipefail
+          if [ "$EVENT_NAME" = "pull_request" ]; then
+            LOG_OPTS="$BASE..$HEAD"
+          elif [ "$BEFORE" = "0000000000000000000000000000000000000000" ]; then
+            LOG_OPTS="-1 $SHA"
+          else
+            LOG_OPTS="$BEFORE..$SHA"
+          fi
+          gitleaks git --config .gitleaks.toml --log-opts="$LOG_OPTS" --redact --verbose --exit-code 1 \
+            --report-format sarif --report-path "$RUNNER_TEMP/gitleaks.sarif"
+
+      - name: Upload gitleaks SARIF
+        if: always()
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        with:
+          name: gitleaks-report
+          path: ${{ runner.temp }}/gitleaks.sarif
+          retention-days: 7

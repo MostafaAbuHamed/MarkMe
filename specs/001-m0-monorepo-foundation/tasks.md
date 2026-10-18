@@ -351,7 +351,7 @@ studio,imgproxy,edge-runtime,logflare,vector,supavisor`
   - `pnpm db:test`
   - `pnpm db:types`
   - `git diff --exit-code packages/database/src/types.gen.ts`
-- [ ] T022 [US2] Add the `secrets` job to `/.github/workflows/ci.yml`:
+- [x] T022 [US2] Add the `secrets` job to `/.github/workflows/ci.yml`:
   - `actions/checkout` with `fetch-depth: 0`.
   - Download the `gitleaks_8.30.1_linux_x64.tar.gz` asset and the release checksums file from
     `github.com/gitleaks/gitleaks/releases/download/v8.30.1/`, then verify with
