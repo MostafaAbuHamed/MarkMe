@@ -91,7 +91,7 @@ fill), tests are written first and must fail before the implementation task.
   - `typecheck`: outputs `[]`.
   - `test`: outputs `["coverage/**"]`.
   - Internal packages ship TS source, so `lint`/`typecheck` need no `^build`.
-- [ ] T004 Create `packages/config` (`@markme/config`, private):
+- [X] T004 Create `packages/config` (`@markme/config`, private):
   - `package.json` with `exports` for `./tsconfig/base.json`, `./tsconfig/node.json`,
     `./tsconfig/react.json`, `./eslint`, `./prettier`.
   - `packages/config/tsconfig/base.json`:
