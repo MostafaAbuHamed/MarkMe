@@ -187,3 +187,15 @@ whole M0 stack plus one change. All were closed unmerged and their branches dele
 | #30 | placeholder-only `.env.example` change (`replace-with-your-local-anon-key`), US-2 #5 | none          | 5 pass       | CLEAN       | `secrets` passes                                                                                         |
 
 SC-003: five of five faults caught. FR-012: merging is blocked while a required check fails.
+
+### V3 configuration validation (T028, 2026-10-18)
+
+| Check                                                                                                | Result | Evidence                                                                                                                                         |
+| ---------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm test` covers every key of both apps (SC-005)                                                   | pass   | preview-api 15 (12 env), extension 12 (env, key-set lock), domain 13, scripts 11                                                                 |
+| Preview API with `PORT=abc` and no `SUPABASE_URL` (US-3 #1–#3)                                       | pass   | exit 1, no stack trace; lists `PORT: invalid, expected a port number from 1 to 65535` and `SUPABASE_URL: missing`, plus the copy hint            |
+| Extension build from an unfilled example copy with `WXT_PREVIEW_API_URL=not-a-url` (US-3 #2, #3, #6) | pass   | exit 1; lists `WXT_PREVIEW_API_URL` and `WXT_SUPABASE_ANON_KEY` (placeholder) as invalid with expected formats; no `.output/chrome-mv3` produced |
+| No value printed (US-3 #4, FR-019)                                                                   | pass   | neither `abc`, `not-a-url` nor the placeholder appears in either message                                                                         |
+| App starts with the config `pnpm dev` created (US-3 #5)                                              | pass   | see V1: `/healthz` answered and the extension dev build was produced from the generated `.env` files                                             |
+
+No gaps found, so `src/` was not changed.

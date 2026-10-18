@@ -410,7 +410,7 @@ extension build) with one message naming every bad key, with no values (SC-005, 
     `expect(Object.keys(extensionEnvSchema.shape).sort()).toEqual(["WXT_PREVIEW_API_URL",
 "WXT_SUPABASE_ANON_KEY", "WXT_SUPABASE_URL"])` (FR-022).
   - No key name matches `/SERVICE|SECRET|JWT/`.
-- [ ] T028 [US3] Run quickstart.md V3 by hand:
+- [x] T028 [US3] Run quickstart.md V3 by hand:
   - The preview API with `SUPABASE_URL` removed and `PORT=abc` exits 1, listing both.
   - The extension build with `WXT_PREVIEW_API_URL=not-a-url` fails and produces no
     `apps/extension/.output/chrome-mv3`.
