@@ -65,7 +65,7 @@ fill), tests are written first and must fail before the implementation task.
 
 **Purpose**: the workspace root and shared tooling config. Nothing runs yet.
 
-- [ ] T001 Create the root workspace files:
+- [X] T001 Create the root workspace files:
   - `package.json`: `"name": "markme"`, `"private": true`, `"type": "module"`,
     `"packageManager": "pnpm@12.14.0"`, `"engines": { "node": ">=24 <25" }`.
   - Root scripts exactly as in contracts/root-commands.md, **except** `dev` (added in T016):
@@ -78,7 +78,7 @@ fill), tests are written first and must fail before the implementation task.
   - `.nvmrc` containing `24`.
   - Run `pnpm install` to produce `pnpm-lock.yaml`.
   - Proof: `pnpm install` succeeds on Node 24, and fails with an engine error on Node 26.
-- [ ] T002 [P] Fix the anchoring in `/.gitignore`:
+- [X] T002 [P] Fix the anchoring in `/.gitignore`:
   - Replace `supabase/.temp/` and `supabase/.branches/` with `**/supabase/.temp/` and
     `**/supabase/.branches/` (plan, Structure Decision).
   - Proof: `git check-ignore -v --no-index packages/database/supabase/.temp/x` prints the rule.
