@@ -115,7 +115,7 @@ fill), tests are written first and must fail before the implementation task.
   - Add `/eslint.config.mjs` re-exporting `@markme/config/eslint`, and a root `lint` for root files
     via the turbo root task `//#lint` (`eslint scripts eslint.config.mjs`) in `/turbo.json`.
   - Add `@markme/config` as a root devDependency (`workspace:*`).
-- [X] T006 Add the shared Prettier config:
+- [x] T006 Add the shared Prettier config:
   - `packages/config/prettier/index.js`: `printWidth: 100`, `singleQuote: false`,
     `trailingComma: "all"`.
   - `/.prettierrc.mjs` re-exports it.
@@ -133,7 +133,7 @@ the local database harness (used by US1 and the US2 `db` check).
 
 **⚠️ No user-story work begins until this phase is complete.**
 
-- [ ] T007 Create `packages/domain` (`@markme/domain`, private):
+- [x] T007 Create `packages/domain` (`@markme/domain`, private):
   - `package.json`: `"exports": { ".": "./src/index.ts" }`, dependency `zod`, devDependency
     `vitest`, and scripts `lint` (`eslint .`), `typecheck` (`tsc --noEmit`), `test`
     (`vitest run`).
