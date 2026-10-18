@@ -8,6 +8,15 @@
 
 **Input**: User description: "M0: Monorepo foundation -> Set up the MarkMe monorepo so that a developer can clone it and run the whole local stack (database, auth, preview service, Chrome extension dev build) with one command. Every pull request is checked automatically for lint, types, unit tests, database tests and leaked secrets. Each app refuses to start with missing or invalid configuration and explains what is missing. No product features in this milestone."
 
+## Clarifications
+
+### Session 2026-10-18
+
+- Q: On a fresh clone there are no real config files yet. When the developer runs the one start command, what should happen? → A: The start command creates any missing local config file from the example file plus the values the local stack reports. It never overwrites an existing file.
+- Q: Will the MarkMe repository be public, so the free plan can enforce merge blocking? → A: Yes, public. GitHub enforces merge blocking on `main` and on milestone branches.
+- Q: Which operating systems must the one-command setup be proven to work on? → A: Linux only (supported and verified). macOS likely works but is not promised; native Windows is out of scope; WSL users follow the Linux steps.
+- Q: Before the repository goes public, should the secret check also scan the whole existing git history once? → A: No. The pull-request scan only (FR-015 as written); no one-time history scan and no push scan.
+
 ## User Scenarios & Testing *(mandatory)*
 
 The users of this milestone are **contributors**: the project owner and the AI coding agents that
@@ -34,16 +43,22 @@ and the extension development build appears and loads in the browser.
 1. **Given** a fresh clone on a machine with the documented prerequisites, **When** the
    contributor installs dependencies and runs the start command, **Then** the local database and
    auth service, the preview service and the extension development build are all running, and the
-   command prints the local address of each service.
-2. **Given** the stack is running, **When** the contributor requests the preview service's health
+   command prints the local address of each service. No manual config step is needed.
+2. **Given** a fresh clone with no real config files, **When** the contributor runs the start
+   command, **Then** it creates each app's local config file from that app's example file plus the
+   values the local stack reports, before starting the apps.
+3. **Given** a contributor already has a local config file, **When** they run the start command,
+   **Then** the file is left unchanged, even if its values differ from what the local stack
+   reports.
+4. **Given** the stack is running, **When** the contributor requests the preview service's health
    check, **Then** it answers with a healthy status.
-3. **Given** the stack is running, **When** the contributor loads the development build into the
+5. **Given** the stack is running, **When** the contributor loads the development build into the
    browser as an unpacked extension, **Then** the extension loads without errors and opens a
    placeholder popup.
-4. **Given** the local database is already running from an earlier session, **When** the
+6. **Given** the local database is already running from an earlier session, **When** the
    contributor runs the start command again, **Then** the command reuses the running database
    instead of failing or starting a second copy.
-5. **Given** the stack is running, **When** the contributor stops the start command, **Then** the
+7. **Given** the stack is running, **When** the contributor stops the start command, **Then** the
    preview service and extension build stop, and a separate documented command stops the local
    database.
 
@@ -105,8 +120,8 @@ Confirm it exits without serving anything and that the message names both settin
    and the expected format.
 4. **Given** a misconfigured app, **When** the message is printed, **Then** it never prints the
    value of any secret setting.
-5. **Given** an app with valid configuration copied from its example file plus the local values the
-   start command prints, **When** the contributor starts it, **Then** it starts normally.
+5. **Given** an app with the local config file the start command created, **When** the contributor
+   starts it, **Then** it starts normally.
 6. **Given** the extension's development or production build, **When** a required setting is
    missing, **Then** the build fails with the same kind of message instead of producing an
    extension that fails at runtime.
@@ -123,8 +138,11 @@ Confirm it exits without serving anything and that the message names both settin
   the port it tried to use.
 - **One service crashes while the stack runs**: its error is visible in the combined output with
   the service's name; the contributor does not have to guess which part failed.
-- **Missing environment file**: treated like missing settings. The message lists every required
+- **Missing environment file**: the start command creates it (FR-007a). If an app is started some
+  other way without one, it is treated like missing settings: the message lists every required
   setting and points to the example file to copy.
+- **Existing config file with stale values** (for example after the local stack was re-created):
+  the start command does not change it. The contributor fixes or deletes it; the README says how.
 - **A real environment file is created locally**: it is ignored by version control, so it cannot be
   committed by accident. Only the example files are tracked.
 - **A secret appears in a pull request's history but not in the final diff**: the secret check
@@ -159,7 +177,11 @@ Confirm it exits without serving anything and that the message names both settin
 - **FR-006**: The start command MUST reuse an already-running local database instead of failing or
   starting a second copy.
 - **FR-007**: The start command MUST print the local address of each service and tell the
-  contributor where to find the local keys the apps need.
+  contributor which local config files it created or found.
+- **FR-007a**: Before starting the apps, the start command MUST create any missing local config
+  file from that app's example file plus the values the local stack reports (addresses and the
+  public database key only). It MUST NEVER overwrite or edit an existing config file, and MUST
+  NEVER write a privileged key into any app's config file.
 - **FR-008**: The preview service MUST expose a health check that reports a healthy status when it
   is running. It MUST have no other product endpoints in this milestone.
 - **FR-009**: The extension development build MUST load in the browser as an unpacked extension and
@@ -171,7 +193,9 @@ Confirm it exits without serving anything and that the message names both settin
 
 - **FR-011**: Every pull request MUST automatically run five checks: lint, type check, unit tests,
   database tests and secret scanning. Each check MUST report pass or fail on the pull request.
-- **FR-012**: A failing check MUST block merging.
+- **FR-012**: A failing check MUST block merging. The block MUST be enforced by the hosting
+  service (not only by review) on `main` and on every milestone branch, so pull requests into a
+  milestone branch are gated the same way as merges into `main`.
 - **FR-013**: The unit-test check MUST run at least one real passing unit test in this milestone,
   so the test runner is proven to work.
 - **FR-014**: The database-test check MUST start a real local database in the check environment and
@@ -221,7 +245,7 @@ Confirm it exits without serving anything and that the message names both settin
 
 ### Measurable Outcomes
 
-- **SC-001**: A contributor with the documented prerequisites goes from a fresh clone to a fully
+- **SC-001**: A contributor on Linux with the documented prerequisites goes from a fresh clone to a fully
   running local stack by following the README alone, with no undocumented step, in under 15 minutes
   on the first run (including downloads) and under 2 minutes on later runs.
 - **SC-002**: 100% of pull requests show all five check results without manual action.
@@ -237,16 +261,21 @@ Confirm it exits without serving anything and that the message names both settin
 
 ## Assumptions
 
-- Contributors work on Linux or macOS with a container runtime, the pinned runtime version, the
-  package manager and the database command-line tool installed. Installing them is a documented
+- The supported and verified contributor platform is Linux (the owner's machine and the check
+  environment). macOS may work but is not promised or tested. Native Windows is out of scope;
+  WSL users follow the Linux steps. Contributors have a container runtime, the pinned runtime
+  version, the package manager and the database command-line tool installed. Installing them is a documented
   prerequisite, not automated by this milestone.
 - The automated checks run on the repository's hosted continuous-integration service on its free
   tier. No remote result cache or paid service is used; reusing results inside the free service is
   enough.
 - The local database stays running after the start command stops, because restarting it is slow.
   A separate documented command stops it.
-- Merge blocking on failed checks is a repository setting turned on by the owner once the checks
-  exist. The milestone documents the setting and confirms it is on.
+- The repository is public, so the hosting service's free plan can enforce merge blocking. The
+  owner turns the protection on once the checks exist; the milestone documents the setting and
+  confirms it is on for `main` and milestone branches.
+- Secret scanning covers pull requests only. Commits already in history before the checks exist,
+  and commits pushed without a pull request, are not scanned by this milestone (owner's decision).
 - Detecting a privileged key that was wrongly put into the extension's final bundle is M8's job
   (bundle secret check). This milestone keeps such settings out of the extension's declared
   configuration.
