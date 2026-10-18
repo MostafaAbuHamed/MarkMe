@@ -210,7 +210,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Create `apps/preview-api` (`@markme/preview-api`, private):
+- [x] T013 [US1] Create `apps/preview-api` (`@markme/preview-api`, private):
   - `package.json`:
     - dependencies `express`, `@markme/domain` (`workspace:*`), `zod`.
     - devDependencies `tsx`, `@types/express`, `@types/node`, `vitest`, `supertest`,
