@@ -171,3 +171,19 @@ Ruleset `ci-gate` applied with the command in V5 step 2. Ruleset id **25337047**
 `deletion, non_fast_forward, pull_request, required_status_checks` for both `main` and
 `001-m0-monorepo-foundation`. It returns nothing for the per-task branches (`m0/t0NN-*`), which are
 not milestone branches.
+
+### Deliberate-fault proofs (T025, 2026-10-18)
+
+Six throwaway draft PRs into `001-m0-monorepo-foundation` (protected by `ci-gate`), each holding the
+whole M0 stack plus one change. All were closed unmerged and their branches deleted.
+
+| PR  | Fault                                                                                | Failing check | Other checks | Merge state | Evidence                                                                                                 |
+| --- | ------------------------------------------------------------------------------------ | ------------- | ------------ | ----------- | -------------------------------------------------------------------------------------------------------- |
+| #25 | un-awaited promise in `packages/domain/src/fault.ts`                                 | `lint`        | 4 pass       | BLOCKED     | `fault.ts 2:3 @typescript-eslint/no-floating-promises` (and `1:8 require-await`)                         |
+| #26 | `const fault: number = "a"`                                                          | `typecheck`   | 4 pass       | BLOCKED     | tsc type error in `fault.ts`                                                                             |
+| #27 | `expect(1).toBe(2)` in a domain test                                                 | `test`        | 4 pass       | BLOCKED     | Vitest failure                                                                                           |
+| #28 | `select ok(false, …)` in `supabase/tests/001-fault.test.sql`                         | `db`          | 4 pass       | BLOCKED     | pgTAP failure                                                                                            |
+| #29 | generic high-entropy API key added in one commit, removed in the next                | `secrets`     | 4 pass       | BLOCKED     | `generic-api-key`, `scripts/fault-config.txt:1`, commit `0ba4ab07`; the final diff no longer has the key |
+| #30 | placeholder-only `.env.example` change (`replace-with-your-local-anon-key`), US-2 #5 | none          | 5 pass       | CLEAN       | `secrets` passes                                                                                         |
+
+SC-003: five of five faults caught. FR-012: merging is blocked while a required check fails.

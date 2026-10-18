@@ -369,7 +369,7 @@ studio,imgproxy,edge-runtime,logflare,vector,supavisor`
       `ci-gate` ruleset with the `gh api` command in quickstart.md V5 step 2, and verify it with
       `gh api repos/{owner}/{repo}/rulesets` (FR-012). Record the ruleset id in
       `specs/001-m0-monorepo-foundation/quickstart.md` under V5.
-- [ ] T025 [US2] Run the fault proofs from contracts/ci-checks.md on throwaway branches:
+- [x] T025 [US2] Run the fault proofs from contracts/ci-checks.md on throwaway branches:
   - Five PRs into `001-m0-monorepo-foundation` (lint, type error, failing unit test, failing pgTAP
     test, and a fake secret committed and then removed in a later commit).
   - One PR changing only an `.env.example` placeholder.
