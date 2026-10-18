@@ -360,7 +360,7 @@ studio,imgproxy,edge-runtime,logflare,vector,supavisor`
 --exit-code 1`, with `BASE`/`HEAD` from `github.event.pull_request.base.sha`/`head.sha` on PRs,
     and `github.event.before`/`github.sha` on push.
   - On push, if `before` is all zeros, scan only `github.sha`.
-- [ ] T023 [US2] Push the branch and open a PR into `main` titled `chore(ci): M0 checks`:
+- [x] T023 [US2] Push the branch and open a PR into `main` titled `chore(ci): M0 checks`:
   - Confirm the five checks appear and pass, and record the wall time (SC-002, SC-004 < 10 min).
   - Re-run the jobs and confirm `cache hit` in the Turbo output of `lint`/`typecheck`/`test`
     (US-2 #6).

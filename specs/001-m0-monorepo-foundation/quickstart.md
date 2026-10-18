@@ -151,3 +151,15 @@ Caveats:
   needs to load `apps/extension/.output/chrome-mv3-dev`.
 - In this non-interactive shell, `nvm use` needed `source ~/.nvm/nvm.sh` first. That is shell
   setup, not a README gap. An interactive shell that already loads nvm follows the README as written.
+
+### V5 CI checks (T023, 2026-10-18)
+
+PR [#22](https://github.com/MostafaAbuHamed/MarkMe/pull/22) (`m0/t022-ci-secrets`, the first branch with all
+five jobs), workflow run `39110291727`.
+
+| Check                          | Result | Evidence                                                                               |
+| ------------------------------ | ------ | -------------------------------------------------------------------------------------- |
+| Five checks appear on the PR   | pass   | `lint` 28 s, `typecheck` 18 s, `test` 17 s, `db` 2 m 1 s, `secrets` 9 s, all `success` |
+| Clean PR under 10 min (SC-004) | pass   | Whole run 2 m 3 s (08:08:20 → 08:10:23 UTC); jobs run in parallel                      |
+| No stored secrets (FR-016)     | pass   | `ci.yml` has no `secrets.*` reference; permissions are `contents: read`                |
+| Results reused (US-2 #6)       | pass   | Re-run (attempt 2): Turbo `5/5`, `4/4`, `2/2` cached, `FULL TURBO` in all three jobs   |
