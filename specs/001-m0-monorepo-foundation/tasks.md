@@ -324,7 +324,7 @@ deliberate faults fails only its matching check.
 **Depends on**: Phase 2 (the commands the checks run). It does not depend on US1. The CI file can
 be written in parallel with Phase 3.
 
-- [ ] T019 [P] [US2] Create `/.gitleaks.toml`:
+- [x] T019 [P] [US2] Create `/.gitleaks.toml`:
   - `title = "markme"`.
   - `[extend] useDefault = true`.
   - `[allowlist]` `description = "placeholder values in .env.example"` with
