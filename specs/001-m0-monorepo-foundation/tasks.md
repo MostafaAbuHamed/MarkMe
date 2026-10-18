@@ -154,7 +154,7 @@ the local database harness (used by US1 and the US2 `db` check).
     `error.message` nor `JSON.stringify(error)` (FR-019).
   - Keys not in the schema are ignored.
   - Run them and confirm they fail.
-- [ ] T009 Implement `parseEnv` and `EnvError` in `packages/domain/src/env/parse-env.ts`, matching
+- [x] T009 Implement `parseEnv` and `EnvError` in `packages/domain/src/env/parse-env.ts`, matching
       the signature in contracts/env-helper.md:
   - Use `schema.safeParse` and map `error.issues` per key.
   - Build the message **only** from the key, the kind and the field description. Never use the
