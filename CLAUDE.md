@@ -4,12 +4,28 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Current state
 
-The repo is pre-code: only planning docs and Spec Kit scaffolding exist. No `package.json`, build,
-lint or test tooling yet. The first milestone (M0, monorepo foundation) creates them. Update this
-file with the real commands once M0 lands.
+M0 (monorepo foundation) is implemented: `apps/extension` (WXT popup placeholder),
+`apps/preview-api` (only `GET /healthz`), `packages/config`, `packages/domain`, `packages/database`.
+No product features yet.
 
-The only command already fixed by the plan: `pnpm dev` starts local Supabase (CLI + Docker), the
-preview API and the extension dev build. It must keep working after every merge.
+Toolchain: Node 24 (`.nvmrc`; non-interactive shells may need `source ~/.nvm/nvm.sh && nvm use`),
+pnpm 12.14.0 via corepack, TypeScript 6.0 (not 7 — typescript-eslint supports <6.1), ESLint 9
+(jsx-a11y supports ≤9), zod 4, Vitest 5, Supabase CLI as a pinned dev dependency (`pnpm exec
+supabase ...`, no global install).
+
+Commands (repo root): `pnpm dev`, `pnpm lint`, `pnpm format:check` / `pnpm format`, `pnpm typecheck`,
+`pnpm test`, `pnpm build`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:test`,
+`pnpm db:types`, `pnpm db:new`. `pnpm dev` starts local Supabase (CLI + Docker), the preview API and
+the extension dev build; it must keep working after every merge. `pnpm build` and the extension dev
+build need `apps/extension/.env`, which `pnpm dev` creates from `.env.example` (never overwritten);
+unit tests and typecheck need no `.env`.
+
+CI: five required checks on every PR — lint, typecheck, test, db, secrets; ruleset `ci-gate` blocks
+merges to `main` and `NNN-*` milestone branches unless all are green. After a migration run
+`pnpm db:types` and commit the result (CI fails on drift).
+
+Config: every app validates env via `parseEnv` from `@markme/domain`; the extension schema is locked
+to three public keys by a test.
 
 ## Source documents (read before non-trivial work)
 

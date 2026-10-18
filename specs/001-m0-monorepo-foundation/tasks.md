@@ -423,7 +423,7 @@ extension build) with one message naming every bad key, with no values (SC-005, 
 
 ## Phase 6: Polish and cross-cutting concerns
 
-- [ ] T029 [P] Update `/CLAUDE.md` "Current state" with the real commands (from
+- [x] T029 [P] Update `/CLAUDE.md` "Current state" with the real commands (from
       contracts/root-commands.md), Node 24 / pnpm 12, and the note that `.env` files are created by
       `pnpm dev`. Remove the "pre-code" wording. `AGENTS.md` only includes `@CLAUDE.md`, so it needs no
       change.
