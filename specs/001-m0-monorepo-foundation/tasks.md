@@ -84,7 +84,7 @@ fill), tests are written first and must fail before the implementation task.
   - Proof: `git check-ignore -v --no-index packages/database/supabase/.temp/x` prints the rule.
   - Also confirm that `git check-ignore --no-index apps/extension/.env` matches and
     `apps/extension/.env.example` does not.
-- [ ] T003 Create `/turbo.json` (Turborepo 2 schema):
+- [X] T003 Create `/turbo.json` (Turborepo 2 schema):
   - `build`: `dependsOn: ["^build"]`, outputs `["dist/**", ".output/**"]`.
   - `dev`: `cache: false`, `persistent: true`.
   - `lint`: outputs `[]`.
