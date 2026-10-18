@@ -302,7 +302,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
   - How to refresh stale `.env` files (delete and rerun `pnpm dev`).
   - The root command table from contracts/root-commands.md.
   - No real or demo keys anywhere in the README.
-- [ ] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
+- [x] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
       temp dir):
   - Record first-run and second-run times (SC-001: < 15 min / < 2 min).
   - Check every edge-case row in V2.
@@ -324,7 +324,7 @@ deliberate faults fails only its matching check.
 **Depends on**: Phase 2 (the commands the checks run). It does not depend on US1. The CI file can
 be written in parallel with Phase 3.
 
-- [ ] T019 [P] [US2] Create `/.gitleaks.toml`:
+- [x] T019 [P] [US2] Create `/.gitleaks.toml`:
   - `title = "markme"`.
   - `[extend] useDefault = true`.
   - `[allowlist]` `description = "placeholder values in .env.example"` with
@@ -333,7 +333,7 @@ be written in parallel with Phase 3.
     `gitleaks git --config .gitleaks.toml --redact --verbose` on the branch history.
   - It must pass on the current history and fail on a temporary commit that adds
     `AKIA` + 16 uppercase alphanumerics in a new file. Drop that commit afterwards.
-- [ ] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
+- [x] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
       `concurrency` and the three Turbo jobs `lint`, `typecheck` and `test`, exactly per
       contracts/ci-checks.md:
   - Steps: `actions/checkout` → `pnpm/action-setup` (version from `packageManager`) →
