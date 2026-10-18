@@ -1,0 +1,9 @@
+packages:
+  - "apps/*"
+  - "packages/*"
+
+engineStrict: true
+
+# Repeat installs must still reject the wrong Node. pnpm's default
+# optimisticRepeatInstall short-circuits before the engines check.
+optimisticRepeatInstall: false

@@ -1,0 +1,30 @@
+{
+  "name": "markme",
+  "private": true,
+  "type": "module",
+  "packageManager": "pnpm@12.14.0",
+  "engines": {
+    "node": ">=24 <25"
+  },
+  "scripts": {
+    "build": "turbo run build",
+    "lint": "turbo run lint",
+    "typecheck": "turbo run typecheck",
+    "test": "turbo run test",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "db:start": "supabase start --workdir packages/database -x imgproxy,edge-runtime,logflare,vector,supavisor",
+    "db:stop": "supabase stop --workdir packages/database",
+    "db:reset": "supabase db reset --workdir packages/database",
+    "db:test": "supabase test db --workdir packages/database",
+    "db:types": "supabase gen types typescript --local --workdir packages/database > packages/database/src/types.gen.ts && prettier --write packages/database/src/types.gen.ts",
+    "db:new": "supabase migration new --workdir packages/database"
+  },
+  "devDependencies": {
+    "turbo": "2.11.9",
+    "typescript": "6.0.3",
+    "prettier": "3.9.10",
+    "supabase": "2.121.0",
+    "vitest": "5.0.5"
+  }
+}
