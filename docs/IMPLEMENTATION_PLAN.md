@@ -3,9 +3,9 @@
 | | |
 | --- | --- |
 | Owner | Mostafa |
-| Status | Draft v1.1 |
+| Status | Draft v1.3 |
 | Date | 2026-10-17 |
-| Inputs | [PRD.md](PRD.md), [PLAN.md](PLAN.md) v1.1, [constitution](../.specify/memory/constitution.md) v1.1.0 |
+| Inputs | [PRD.md](PRD.md), [PLAN.md](PLAN.md) v1.1, [constitution](../.specify/memory/constitution.md) v1.1.1 |
 
 ## 0. How to use this document
 
@@ -21,8 +21,8 @@
   - Bring the **Open items** to `/speckit-clarify`.
 - **Change rule:** if `/speckit-clarify` or `/speckit-plan` changes a decision here, update this file
   in the same PR.
-- **Proposals:** items marked **(needs approval)** go beyond the PRD. They are listed in §4 and are
-  not final until Mostafa approves them.
+- **Proposals:** items marked **(approved, An)** go beyond the PRD. They are listed in §4; Mostafa
+  approved all of them on 2026-10-18.
 
 ---
 
@@ -34,17 +34,17 @@ Each dependency is listed with its reason (constitution IV).
 
 | Tool | Version policy | Reason |
 | --- | --- | --- |
-| Node.js | 22 LTS, pinned in `.nvmrc` and `engines` | Current LTS; Cloud Run base image `node:22-slim` |
+| Node.js | 24 LTS, pinned in `.nvmrc` and `engines` | Newest LTS (22 reaches end of life 2027-04); Cloud Run base image `node:24-slim` (M0 research R1) |
 | pnpm | pinned via `packageManager` in root `package.json` (Corepack) | PRD stack; strict workspace resolution |
 | Turborepo | 2.x | PRD stack; cached `lint/typecheck/test/build` |
-| TypeScript | 5.x, `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` | Constitution: strict TS everywhere |
-| ESLint | 9 flat config + `typescript-eslint` (type-aware) + `eslint-plugin-react-hooks` + `eslint-plugin-jsx-a11y` | Shared lint; a11y lint supports VI |
+| TypeScript | 6.0.x (not 7: `typescript-eslint` supports `<6.1`), `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` | Constitution: strict TS everywhere |
+| ESLint | 9 flat config (not 10: `jsx-a11y` supports ≤9) + `typescript-eslint` (type-aware) + `eslint-plugin-react-hooks` + `eslint-plugin-jsx-a11y` | Shared lint; a11y lint supports VI |
 | Prettier | 3.x | Shared formatting |
-| Vitest | 3.x in every package | One test runner; fast; works with WXT |
+| Vitest | 5.x in every package | One test runner; fast; works with WXT |
 | Testing Library | `@testing-library/react`, `user-event`, `vitest-axe` | Component tests + automated axe checks (PLAN DoD) |
 | Playwright | latest stable | E2E with a loaded extension (PRD 7.5) |
-| zod | 3.x (or 4 if stable when M0 starts; decide in M0 plan) | Schemas + env validation (PRD, PLAN) |
-| Supabase CLI | pinned version in CI (`supabase/setup-cli`) | Local stack, migrations, pgTAP, type generation |
+| zod | 4.x (settled in M0 plan, research R5) | Schemas + env validation (PRD, PLAN) |
+| Supabase CLI | exact-pinned root dev dependency `supabase`, same binary locally and in CI (M0 research R8) | Local stack, migrations, pgTAP, type generation |
 
 ### 1.2 Repository layout (end of v1)
 
@@ -116,7 +116,7 @@ Committed `.env.example` files list every key. Real `.env*` files are git-ignore
 | preview-api | `SUPABASE_JWT_SECRET` | Optional; only if the project still uses legacy HS256 tokens (decided in M3) |
 | preview-api | `CORS_ORIGINS` | Comma list, e.g. `chrome-extension://<pinned-id>` |
 | preview-api | `RATE_LIMIT_USER_PER_MIN`, `RATE_LIMIT_IP_PER_MIN`, `RATE_LIMIT_FORCE_PER_HOUR` | Defaults 30 / 60 / 10 |
-| preview-api | `META_OEMBED_TOKEN` | Optional; enables Instagram oEmbed (spike decides) |
+| preview-api | `META_OEMBED_TOKEN` | Optional; Instagram oEmbed works tokenless (S0 Q6), a token only raises rate limits |
 | tests only | `SUPABASE_SERVICE_ROLE_KEY` | Only in E2E global setup / seed scripts; never in any app bundle |
 
 ### 1.5 Branches, PRs, commits
@@ -131,9 +131,9 @@ Committed `.env.example` files list every key. Real `.env*` files are git-ignore
 
 | Job | Added in | Steps |
 | --- | --- | --- |
-| `quality` | M0 | checkout → setup pnpm + Node (cache) → `pnpm install --frozen-lockfile` → `turbo run lint typecheck test` (Turborepo local cache via `actions/cache`) |
-| `db` | M0 | `supabase/setup-cli` → `pnpm db:start` (exclude unused services: `-x studio,imgproxy,edge-runtime,logflare,vector,supavisor`) → `pnpm db:test` → `pnpm db:types` → `git diff --exit-code packages/database/src/types.gen.ts` (drift check) |
-| `secrets` | M0 | `gitleaks/gitleaks-action` on the PR diff |
+| `lint`, `typecheck`, `test` | M0 | three jobs, so each shows its own required check: checkout → setup pnpm + Node (cache) → `pnpm install --frozen-lockfile` → `turbo run <task>` (`lint` also runs `prettier --check`; Turborepo local cache via `actions/cache`) |
+| `db` | M0 | `pnpm install` (CLI is a dev dependency) → `supabase start` (exclude unused services: `-x studio,imgproxy,edge-runtime,logflare,vector,supavisor`) → `pnpm db:test` → `pnpm db:types` → `git diff --exit-code packages/database/src/types.gen.ts` (drift check) |
+| `secrets` | M0 | pinned gitleaks CLI (checksum-verified) over every commit in the PR range |
 | `preview-api-image` | M3 | `docker build apps/preview-api` (build only on PRs) |
 | `e2e` | M4 | `db:start` → start preview API → build extension → `playwright test` (Chromium, extension loaded) |
 | `bundle-secrets` | M8 | build prod extension → `node scripts/check-bundle-secrets.mjs .output/` |
@@ -172,7 +172,7 @@ Separate workflows: `deploy-preview-api.yml` (M3, on push to `main`, path-filter
 ### 2.2 Decision rules
 
 - **Q3 fallback** (if an unverified session is not possible): bring Mostafa these options, as a PRD
-  change. **(needs approval)**
+  change. **(approved as A7: option (a))**
   - **(a)** Keep "Confirm email" on and change US-1 to "must confirm before first sign-in" (simplest).
   - **(b)** Turn confirmation off and drop the banner.
   - **(c)** Turn confirmation off and track verification separately. This is complex, and the
@@ -200,6 +200,71 @@ Separate workflows: `deploy-preview-api.yml` (M3, on push to `main`, path-filter
 - Q6 oEmbed: YouTube ✓ / X … / Instagram …
 ```
 
+### 2.4 S0 results (2026-10-18)
+
+Q3–Q6 were answered from live endpoint calls and the source of the libraries we will ship
+(`@supabase/auth-js` 2.118.0, `supabase/auth` at `ce9a8ee`, 2026-09-22). Q1/Q2 need a real
+Supabase project and a Google OAuth client; the kit for them is on branch `spike/s0`
+(`spike/s0/README.md`).
+
+- **Pinned extension ID:** `dapmmcamlgmaopfaicfjifakodajigha`. The public key is in
+  `spike/s0/extension/manifest.json` (`key`) and moves to `apps/extension/wxt.config.ts` in M4-T1.
+  The private `.pem` is not in git and isn't needed for unpacked installs.
+- **Q1 Google PKCE flow / Q2 from the background worker:** *pending manual run* (the kit implements
+  exactly the §2.1 steps in `background.js`, started from the popup by message).
+- **Q3 Unverified sign-in: not supported for email + password → A7 option (a).**
+  - `GOTRUE_MAILER_ALLOW_UNVERIFIED_EMAIL_SIGN_INS` exists, but it is only read for OAuth providers
+    (`internal/api/external.go`).
+  - The password grant always returns `email_not_confirmed` when `email_confirmed_at` is null
+    (`internal/api/token.go:181`).
+  - `signUp` returns no session unless autoconfirm is on, and autoconfirm leaves no unverified state.
+  - **Consequence:** sign-up shows a "check your email" screen with resend. Sign-in with an
+    unconfirmed email shows the same message plus resend. There is no in-app banner. This
+    contradicted the constitution's "users may use the app before confirming email"
+    (Technology Constraints); amended in constitution v1.1.1 (2026-10-18).
+- **Q4 Linking (from `internal/models/linking.go` + `external.go`):**
+  - Google emails are verified, so GoTrue links the identity to the existing user with that email:
+    **same `user_id`, no duplicate**.
+  - **Unconfirmed** password user: `RemoveUnconfirmedIdentities` deletes the email identity, sets
+    `encrypted_password = null` (pre-account-takeover protection), then confirms the user. The old
+    password no longer works; the user can set a new one through password reset.
+  - **Confirmed** password user: linked, and both the password and Google identities keep working.
+  - Under A7 (a) an unconfirmed account never signed in, so it holds no data.
+  - **M4 acceptance:** Google sign-in on an existing email returns the same `user_id`.
+- **Q5 Refresh coordination: `navigator.locks` is no longer used.** Since auth-js 2.107 the client is
+  lockless by default:
+  - Refreshes within one instance are single-flighted.
+  - Races between contexts are resolved by GoTrue's refresh-token reuse rules.
+  - A commit guard re-reads storage after the refresh and discards the rotated tokens if another
+    context rotated first. Because all surfaces share `chrome.storage.local`, the guard works
+    across popup, side panel and worker.
+  - **Design:** every surface uses `autoRefreshToken: true` and does **not** pass a `lock` option.
+    Pin `@supabase/supabase-js` ≥ 2.107.
+  - After the worker sleeps, the next `getSession()` (surface open, or a preview request in the
+    worker) refreshes an expired token.
+  - **The `alarms` permission is not needed (A8: not added).**
+  - The M4-T7 test forces a short `jwt_expiry` with two clients sharing one storage and asserts a
+    single valid session and no `refresh_token_already_used` surfaced to the UI.
+- **Q6 oEmbed (live calls, no token):**
+  - **YouTube ✓** `https://www.youtube.com/oembed?format=json&url=…` gives title, author, thumbnail
+    and type `video`.
+  - **X ✓** `https://publish.x.com/oembed?omit_script=true&url=…`. `publish.twitter.com` now 301s
+    there, so use the new host directly; our fetcher's redirect re-validation would follow it
+    anyway. It returns `author_name`, `type: rich` and a `blockquote` whose text becomes the
+    description. There is no title or thumbnail, so the HTML path (OG tags on `x.com` are present
+    for a non-browser UA) fills the image.
+  - **Instagram ✓ without a token:**
+    - Meta made oEmbed tokenless on 2026-06-15:
+      `https://graph.facebook.com/v25.0/instagram_oembed?url=…`.
+    - It returns only `provider_name`, `type: rich` and a `blockquote` (no title, author or
+      thumbnail). Caption text is parsed from the blockquote.
+    - Tokenless rate limits are undocumented and may be lower than with a token.
+    - Post pages served no OG tags to our UA in the test.
+    - Unavailable media returns HTTP 400 `code 24` → fallback.
+    - `META_OEMBED_TOKEN` stays optional, for higher limits only.
+  - **Tooling note:** Chrome/Brave-branded builds ignore `--load-extension` (Chrome 137+). E2E must
+    use Playwright's bundled Chromium, which matches the M4 harness.
+
 ---
 
 ## 3. Milestones
@@ -219,7 +284,7 @@ Every milestone also meets the common definition of done in `PLAN.md` §1.
 
 **Technical design**
 - Root `package.json`:
-  - `"packageManager": "pnpm@<pinned>"` and `"engines": { "node": ">=22 <23" }`.
+  - `"packageManager": "pnpm@<pinned>"` and `"engines": { "node": ">=24 <25" }`.
   - Scripts `dev`, `build`, `lint`, `typecheck`, `test`, `format`, plus the `db:*` scripts in §1.3.
 - `pnpm-workspace.yaml`: `apps/*`, `packages/*`.
 - `turbo.json` tasks:
@@ -277,8 +342,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm db:test
 CI is green, with one passing unit test and one passing pgTAP test.
 
 **Open items for `/clarify`**
-- zod 3 vs 4.
-- Whether `turbo` remote cache is needed. Default: no, and local `actions/cache` is enough.
+- Settled in `specs/001-m0-monorepo-foundation/research.md`: zod 4 (R5); no remote cache, `actions/cache` only (R6).
 
 ---
 
@@ -315,7 +379,7 @@ CI is green, with one passing unit test and one passing pgTAP test.
      The extra `unique (id, user_id)` is the target of the composite FK below.
    - `create unique index folders_user_name_uq on folders (user_id, lower(name));`
    - `tags(...)` has the same shape. PRD 6 lists no `tags.created_at`; adding it is
-     **(needs approval, A12)**. It is useful for sorting and costs nothing.
+     **(approved, A12)**. It is useful for sorting and costs nothing.
    - `create unique index tags_user_name_uq on tags (user_id, lower(name));`
 
 4. `…_items.sql`
@@ -325,7 +389,7 @@ CI is green, with one passing unit test and one passing pgTAP test.
      - `url text not null check (url ~* '^https?://')`
      - `normalized_url text not null`
      - `title text`, `description text`, `image_url text`
-     - `favicon_url text` **(needs approval, see M5)**
+     - `favicon_url text` **(approved, A1)**
      - `site_name text`
      - `media_type media_type not null default 'link'`
      - `embed_html text`
@@ -485,8 +549,8 @@ supabase migration list --linked --workdir packages/database   # local == remote
 | 6 | Strip tracking params: `utm_*` (any case), `fbclid`, `gclid` | `?utm_source=x&id=2` → `?id=2` |
 | 7 | Drop an empty query | `https://a.com/x?` / all params stripped → no `?` |
 | 8 | Keep remaining param order and values unchanged | `?b=2&a=1` stays |
-| 9 | Remove trailing slash on path; root has no slash in output | `https://a.com/x/` → `https://a.com/x`; `https://a.com/` → `https://a.com` **(rule for root needs approval)** |
-| 10 | Keep userinfo? → **reject** URLs with credentials | `https://u:p@a.com` → `invalid` (avoids storing secrets) **(needs approval)** |
+| 9 | Remove trailing slash on path; root has no slash in output | `https://a.com/x/` → `https://a.com/x`; `https://a.com/` → `https://a.com` **(approved, A5)** |
+| 10 | Keep userinfo? → **reject** URLs with credentials | `https://u:p@a.com` → `invalid` (avoids storing secrets) **(approved, A5)** |
 
 Edge-case table: IPv6 host `http://[::1]` (normalizes; the preview API blocks it), IDN
 `https://bücher.de` → `https://xn--bcher-kva.de`, encoded paths left as-is, `www.` **kept** (not in
@@ -579,15 +643,15 @@ Error bodies are `{ error: code }` only, never internal details.
 | `ssrf/safe-fetch.ts` | `safeFetch(url, { deadline, maxBytes, maxRedirects, accept })`. Per hop: check scheme ∈ {http, https} and port ∈ {80, 443} (empty port OK) → `resolveSafe` → request through an undici `Agent` whose `connect.lookup` returns **only the validated IP** (pins the connection; SNI/Host still the hostname) → `redirect: 'manual'`. On 3xx: resolve `Location` against the current URL, count ≤ 3, repeat all checks. Headers: fixed `User-Agent: MarkMeBot/1.0 (+repo URL)`, `Accept`, **no cookies**, no auth. One `AbortSignal.timeout(5000)` is created **once before hop 0** and passed to every hop, so 5 s is the total for all redirects, not per hop. Body read as a stream with a byte counter; abort at 2 MB. Content-type allowlist: `text/html`, `application/xhtml+xml`, `image/*` (image → metadata from URL only, no body parse). |
 | `parse/html-metadata.ts` | `cheerio` (reason: robust HTML parsing; no DOM needed). Read the first 2 MB only. Priority: `og:*` → `twitter:*` → `<title>`/`meta[name=description]`. Favicon: `link[rel~=icon]` → `/favicon.ico`. Resolve all URLs relative to the final URL; keep only `http(s)` URLs. |
 | `parse/sanitize.ts` | Strip tags and control chars from every string, decode entities, collapse whitespace, cap lengths (same caps as `previewResponse`). |
-| `oembed/*` | Provider adapters `{ match(url): boolean; fetch(url): Promise<Partial<Preview>> }`, each calling **only its fixed endpoint** through `safeFetch` (the endpoint is a constant, never user-derived). Disabled adapters return `null` → HTML path. YouTube: `https://www.youtube.com/oembed?format=json&url=…`. X: `https://publish.twitter.com/oembed?omit_script=true&url=…`. Instagram: Graph `instagram_oembed` only if `META_OEMBED_TOKEN` is set. |
-| `embed_html` | **Built from server-side templates, never copied from provider HTML (needs approval).** YouTube: extract the video ID with a strict regex → `<iframe src="https://www.youtube-nocookie.com/embed/{id}" …>`. X/Instagram: `embed_html = null` (their embeds need remote scripts, which MV3 extension pages can't run); title/author/thumbnail still returned. |
+| `oembed/*` | Provider adapters `{ match(url): boolean; fetch(url): Promise<Partial<Preview>> }`, each calling **only its fixed endpoint** through `safeFetch` (the endpoint is a constant, never user-derived). Disabled adapters return `null` → HTML path. YouTube: `https://www.youtube.com/oembed?format=json&url=…`. X: `https://publish.x.com/oembed?omit_script=true&url=…`. Instagram: `https://graph.facebook.com/v25.0/instagram_oembed?url=…` (tokenless; `access_token` added only if `META_OEMBED_TOKEN` is set). X/Instagram return only a `blockquote`: its text becomes the description, and the HTML path fills title/image (S0 Q6). |
+| `embed_html` | **Built from server-side templates, never copied from provider HTML (approved, A6).** YouTube: extract the video ID with a strict regex → `<iframe src="https://www.youtube-nocookie.com/embed/{id}" …>`. X/Instagram: `embed_html = null` (their embeds need remote scripts, which MV3 extension pages can't run); title/author/thumbnail still returned. |
 | `pipeline.ts` | `validate → cache → oEmbed match → safeFetch HTML → parse → detectMediaType → sanitize → cache.set → return`. On provider failure, fall through to HTML. On HTML failure, throw a typed error mapped to 502/504/422. |
 
 **Docker and deploy**
 - `Dockerfile`:
-  - Multi-stage: `node:22-slim` builder runs `pnpm deploy --filter @markme/preview-api --prod`
+  - Multi-stage: `node:24-slim` builder runs `pnpm deploy --filter @markme/preview-api --prod`
     and compiles TS with `tsc` or `tsup`.
-  - Runtime stage `node:22-slim` runs as `USER node`, with `CMD ["node","dist/server.js"]` and a
+  - Runtime stage `node:24-slim` runs as `USER node`, with `CMD ["node","dist/server.js"]` and a
     `HEALTHCHECK` on `/healthz`.
 - `deploy-preview-api.yml` runs on push to `main` when `apps/preview-api/**`, `packages/domain/**`
   or the lockfile change:
@@ -614,7 +678,7 @@ Error bodies are `{ error: code }` only, never internal details.
 | `safe-fetch.limits.test.ts` | Server that trickles bytes past 5 s → 504; 3 MB body → aborted at 2 MB; `application/json`, `application/octet-stream` rejected; `image/png` accepted without body parse |
 | `safe-fetch.headers.test.ts` | Request carries fixed UA; no `cookie`/`authorization` header; `Set-Cookie` from target not replayed on redirect |
 | `html-metadata.test.ts` | Fixtures: OG-complete page, Twitter-only page, bare `<title>`, relative image URLs, malicious `<script>` in title, huge description, missing everything |
-| `oembed.test.ts` | YouTube/X/Instagram via `MockAgent`; provider 4xx/5xx → HTML fallback; Instagram disabled without token; YouTube embed built from ID only (no provider HTML passthrough) |
+| `oembed.test.ts` | YouTube/X/Instagram via `MockAgent`; provider 4xx/5xx → HTML fallback; Instagram tokenless request has no `access_token`, and adds it when `META_OEMBED_TOKEN` is set; Meta `code 24` → HTML fallback; X/Instagram blockquote text → description; YouTube embed built from ID only (no provider HTML passthrough) |
 | `app.test.ts` (supertest) | No/invalid/expired JWT → 401; valid JWT (signed with a test JWKS) → 200; invalid URL → 400; private target → 422; rate limit per user and per IP → 429; `force` limiter → 429; cache hit doesn't refetch; CORS rejects unknown origin; error bodies have no stack |
 
 Local targets: tests start `http.createServer` on `127.0.0.1` and **temporarily inject an allow-all
@@ -664,9 +728,9 @@ Run against both local and the Cloud Run URL.
 **Spec input seed**
 > Ship the MarkMe Chrome extension shell: a popup for quick actions, a side panel for the library,
 > and a background process. A person can create an account with email and password, sign in, sign
-> in with Google in one click, stay signed in after restarting the browser, and sign out. Until
-> their email is confirmed they see a gentle, non-blocking reminder with a way to resend the email
-> (per the S0 outcome). Forms show clear inline errors. The extension asks for the fewest
+> in with Google in one click, stay signed in after restarting the browser, and sign out. After
+> signing up they are asked to confirm their email before first sign-in, with a way to resend the
+> email. Forms show clear inline errors. The extension asks for the fewest
 > permissions possible, looks good in light and dark mode, and is fully keyboard accessible.
 
 **Technical design**
@@ -683,7 +747,7 @@ Run against both local and the Cloud Run URL.
 - `src/lib/storage-adapter.ts`: `chromeStorageAdapter: AuthStorage` over `browser.storage.local`
   (survives restarts). Keys are namespaced by the supabase-js `storageKey`.
 - `src/lib/supabase.ts`:
-  - Each entrypoint calls `createMarkMeClient({ url, anonKey, storage: chromeStorageAdapter, flowType: 'pkce', detectSessionInUrl: false, autoRefreshToken: <per S0 Q5> })`
+  - Each entrypoint calls `createMarkMeClient({ url, anonKey, storage: chromeStorageAdapter, flowType: 'pkce', detectSessionInUrl: false, autoRefreshToken: true })` with **no `lock` option** (auth-js is lockless since 2.107; S0 Q5)
     once **per surface** (module scope of that entrypoint; not shared across surfaces).
   - Surfaces subscribe to `browser.storage.onChanged` to call `supabase.auth.getSession()` and
     re-render when another surface signs in or out.
@@ -694,9 +758,10 @@ Run against both local and the Cloud Run URL.
   - `SignInForm`, `SignUpForm` (zod: email, password ≥ 8; errors via `aria-describedby`; submit
     disabled while pending).
   - `GoogleButton`.
-  - `UnverifiedBanner`: shows when `user.email_confirmed_at == null` (if S0 allows that state).
-    Resend uses `supabase.auth.resend({ type: 'signup', email })` with a 60 s cooldown. It is a
-    dismissible `role="status"` element.
+  - `ConfirmEmailNotice` (A7 option (a), S0 Q3): shown after sign-up (no session is returned) and
+    when sign-in fails with `email_not_confirmed`. Resend uses
+    `supabase.auth.resend({ type: 'signup', email })` with a 60 s cooldown. It is a `role="status"`
+    element. There is no in-app unverified banner, because an unconfirmed user cannot hold a session.
   - `AccountMenu` (sign out → `supabase.auth.signOut()`, which clears the storage keys; verify they
     are gone).
 - The popup shows `SignIn` when signed out and a placeholder "Save" view otherwise (built in M5).
@@ -708,14 +773,14 @@ Run against both local and the Cloud Run URL.
     - Every text/background pair is checked for AA.
   - Components in `src/ui/`: `Button`, `IconButton`, `TextField`, `Textarea`, `Select`, `Banner`,
     `Spinner`, `Dialog` (native `<dialog>`), `Toast`, `VisuallyHidden`.
-  - **No CSS framework (needs approval).** Reason: keep the popup bundle small for the 300 ms
+  - **No CSS framework (approved, A9).** Reason: keep the popup bundle small for the 300 ms
     budget. CSS modules are supported by Vite with no new dependency.
 - **Data layer:** `@tanstack/react-query` (reason: request caching, infinite queries for M6,
   invalidation for M7; would otherwise be hand-rolled). One `QueryClient` per surface.
 - **Supabase dashboards** (local `config.toml` + Cloud):
   - Google provider enabled.
   - Redirect allow-list includes `https://<ext-id>.chromiumapp.org/**`.
-  - Email confirmation setting per S0.
+  - "Confirm email" **on** (A7 (a)); autoconfirm off.
   - Local email testing through the bundled mail catcher (Mailpit/Inbucket on `:54324`).
 - **Playwright harness** (`e2e/fixtures.ts`):
   - `chromium.launchPersistentContext('', { channel: 'chromium', args: ['--disable-extensions-except=…', '--load-extension=…'] })`.
@@ -727,7 +792,7 @@ Run against both local and the Cloud Run URL.
 **Tests**
 - Component tests:
   - SignIn/SignUp validation (empty, bad email, 7-char password), submit success/failure.
-  - Banner visibility and resend cooldown.
+  - Confirm-email notice after sign-up and on `email_not_confirmed`; resend cooldown.
   - Sign-out clears storage (`fakeBrowser`).
   - A `vitest-axe` assertion on each form.
 - Adapter tests: get/set/remove against `fakeBrowser.storage.local`.
@@ -744,9 +809,9 @@ Run against both local and the Cloud Run URL.
 | M4-T2 | `chrome.storage` adapter + per-surface client + storage-change sync + tests |
 | M4-T3 | Design tokens, themes, base UI components + axe tests (frontend-design/impeccable) |
 | M4-T4 | Sign-up / sign-in forms + auth gate in popup and side panel + tests |
-| M4-T5 | Unverified-email banner + resend (per S0) + tests |
+| M4-T5 | Confirm-email notice + resend (A7 (a), S0 Q3) + tests |
 | M4-T6 | Google sign-in via background message + Supabase/Google config docs + tests |
-| M4-T7 | Sign-out + session restore + token refresh strategy (per S0 Q5) + tests |
+| M4-T7 | Sign-out + session restore + lockless refresh across surfaces (S0 Q5) + tests |
 | M4-T8 | TanStack Query setup per surface |
 | M4-T9 | Playwright harness + sign-in smoke + `e2e` CI job |
 
@@ -759,8 +824,7 @@ Manual checklist: Google sign-in works; Chrome restart keeps the session; sign o
 `sb-*` keys from `chrome.storage.local`; the whole flow works by keyboard.
 
 **Open items for `/clarify`**
-- US-1 behavior from S0 Q3.
-- Linking behavior from S0 Q4.
+- Resolved by S0 (§2.4): US-1 behavior (A7 (a)) and linking (same `user_id`).
 - Theme toggle in the UI vs system-only.
 
 ---
@@ -797,8 +861,8 @@ Manual checklist: Google sign-in works; Chrome restart keeps the session; sign o
   - Reasons: one transaction (no half-saved item), and PostgREST `upsert` can't target an
     expression index. `security invoker` keeps RLS in force. pgTAP tests cover new, duplicate,
     tag reuse case-insensitively, cross-user isolation, and an invalid folder (FK error).
-  - **(needs approval)** It is not in the PRD, but it implements D3/US-6 safely.
-- **`favicon_url` column (needs approval):** PRD 6 has no favicon field, but US-9 needs "the site's
+  - **(approved, A2)** It is not in the PRD, but it implements D3/US-6 safely.
+- **`favicon_url` column (approved, A1):** PRD 6 has no favicon field, but US-9 needs "the site's
   favicon on top". It is filled by the preview API (see M3 `previewResponse.faviconUrl`). Without it
   the alternative is the Chrome `favicon` permission (`_favicon/` URLs), which widens permissions.
   Proposed: add the column in M1 so no extra migration is needed.
@@ -1111,7 +1175,7 @@ both open, rename a folder in the side panel; the popup's folder list updates.
     `wxt build --mode production`.
   - Cloud Run `CORS_ORIGINS` = `chrome-extension://<pinned-id>`.
   - Supabase Cloud Auth: Site URL, redirect allow-list (`https://<id>.chromiumapp.org/**`), Google
-    provider client ID/secret (stored in Supabase only), email confirmation setting per S0.
+    provider client ID/secret (stored in Supabase only), "Confirm email" on (A7 (a)).
 - **Bundle secret check** `scripts/check-bundle-secrets.mjs`:
   - Scans `.output/chrome-mv3/**` for the env var name `SERVICE_ROLE`, the literal
     `"role":"service_role"` inside any base64url JWT payload found by regex, and `sb_secret_`
@@ -1150,9 +1214,9 @@ both open, rename a folder in the side panel; the popup's folder list updates.
 
 ---
 
-## 4. Decisions that need Mostafa's approval
+## 4. Decisions (all approved by Mostafa, 2026-10-18)
 
-| # | Proposal | Where | Why | Default if not approved |
+| # | Proposal | Where | Why | Rejected alternative |
 | --- | --- | --- | --- | --- |
 | A1 | Add `items.favicon_url`, filled by the preview API | M1/M3/M5 | US-9 requires a favicon; the alternative needs the extra `favicon` permission | No favicon overlay; placeholder only |
 | A2 | `save_item` RPC (atomic insert + tag upsert + links) | M5 | Atomic save; PostgREST can't upsert on `lower(name)` | Multi-request client save, with partial-failure risk |
@@ -1167,7 +1231,10 @@ both open, rename a folder in the side panel; the popup's folder list updates.
 | A11 | Manual `db:push` to Supabase Cloud (no CI auto-migrate) | M1 | No stored DB password in CI; v1 scale | CI job on `main` |
 | A12 | Add `tags.created_at` (not in PRD 6) | M1 | Stable sort in the tag manager; no cost | Omit; sort tags by name |
 
-Approved items get copied into the PRD (A1, A3, A7) or noted in the milestone spec.
+A1, A3 and A7 are in PRD v1.1. S0 Q3 showed Supabase cannot allow unverified password sign-in, so
+A7 option (a) applies; the constitution was amended to match (v1.1.1, Auth line).
+S0 Q5 showed the `alarms` permission is not needed (A8: not added). The rest go into the
+milestone specs as written.
 
 ---
 
@@ -1175,7 +1242,7 @@ Approved items get copied into the PRD (A1, A3, A7) or noted in the milestone sp
 
 | Requirement | Milestone · tasks | Proof |
 | --- | --- | --- |
-| US-1 Sign up | M4-T4, M4-T5 | `SignUpForm.test.tsx`, banner tests, S0 Q3 |
+| US-1 Sign up | M4-T4, M4-T5 | `SignUpForm.test.tsx`, confirm-notice tests, S0 Q3 |
 | US-1b Google sign-in | S0 Q1–Q4, M4-T6 | background handler test, manual Google check |
 | US-2 Sign in/out, persistence | M4-T4, M4-T7, M4-T9 | E2E sign-in, sign-out storage test, manual restart |
 | US-3 `chrome.storage` session | M4-T2 | adapter tests |
@@ -1208,6 +1275,8 @@ Approved items get copied into the PRD (A1, A3, A7) or noted in the milestone sp
 | Secrets hygiene | M0-T8/T9, M8-T6 | gitleaks, bundle secret check |
 
 ## Changelog
+- v1.3 (2026-10-18): M0 `/speckit-plan` changes: Node 24, TS 6.0, ESLint 9 kept, Vitest 5, zod 4, Supabase CLI as dev dependency, five CI jobs, gitleaks CLI; M0 open items settled.
+- v1.2 (2026-10-18): §4 decisions approved; S0 results for Q3–Q6 (§2.4) applied to M3/M4 (lockless refresh, no `alarms`, confirm-before-sign-in, tokenless Instagram, `publish.x.com`). Q1/Q2 pending a manual run.
 - v1.1 (2026-10-17): applied plan review (Cursor, GLM 5.2 Max). Changes:
   - item_tags select/delete check both sides.
   - Teredo/NAT64 ranges added; the single deadline for the whole redirect chain is now explicit.

@@ -1,0 +1,30 @@
+openapi: 3.1.0
+info:
+  title: MarkMe Preview API (M0)
+  version: 0.0.0
+  description: |
+    M0 exposes only the health check (FR-008). `POST /v1/preview` arrives in M3.
+    Any other path returns 404.
+servers:
+  - url: http://127.0.0.1:8787
+    description: Local (pnpm dev)
+paths:
+  /healthz:
+    get:
+      summary: Liveness check
+      operationId: getHealth
+      security: []
+      responses:
+        "200":
+          description: The process is up and serving.
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [ok]
+                additionalProperties: false
+                properties:
+                  ok:
+                    type: boolean
+                    const: true
+              example: { ok: true }

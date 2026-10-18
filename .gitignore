@@ -53,3 +53,6 @@ Thumbs.db
 
 # Machine-local agent settings
 .claude/settings.local.json
+
+# Local leftovers from spike S0 (the kit itself lives on branch spike/s0)
+spike/
