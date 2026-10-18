@@ -198,7 +198,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
   - `GET /healthz` returns 200, `content-type` application/json, and body exactly `{ ok: true }`
     (contracts/preview-api.openapi.yaml).
   - `GET /anything-else` returns 404 (FR-008).
-- [ ] T012 [P] [US1] Write `scripts/dev-env.test.mjs` (Vitest) for the pure functions planned in
+- [x] T012 [P] [US1] Write `scripts/dev-env.test.mjs` (Vitest) for the pure functions planned in
       `scripts/dev-env.mjs`:
   - `parseStatusEnv(text)` returns **only** `{ API_URL, ANON_KEY }`, even when the input contains
     `SERVICE_ROLE_KEY`, `SECRET_KEY`, `JWT_SECRET` and `S3_PROTOCOL_ACCESS_KEY_SECRET` lines.
