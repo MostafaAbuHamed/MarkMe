@@ -344,7 +344,7 @@ be written in parallel with Phase 3.
   - `lint` also runs `pnpm format:check`.
   - Pin every action by full commit SHA, with the tag in a comment.
   - No `secrets.*` reference anywhere (FR-016).
-- [ ] T021 [US2] Add the `db` job to `/.github/workflows/ci.yml`:
+- [x] T021 [US2] Add the `db` job to `/.github/workflows/ci.yml`:
   - The same setup, without the Turbo cache.
   - `pnpm exec supabase start --workdir packages/database -x
 studio,imgproxy,edge-runtime,logflare,vector,supavisor`
