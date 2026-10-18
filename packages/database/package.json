@@ -1,0 +1,17 @@
+{
+  "name": "@markme/database",
+  "private": true,
+  "type": "module",
+  "version": "0.0.0",
+  "exports": {
+    ".": "./src/index.ts"
+  },
+  "scripts": {
+    "lint": "eslint .",
+    "typecheck": "tsc --noEmit"
+  },
+  "devDependencies": {
+    "@markme/config": "workspace:*",
+    "typescript": "6.0.3"
+  }
+}

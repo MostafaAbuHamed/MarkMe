@@ -162,7 +162,7 @@ the local database harness (used by US1 and the US2 `db` check).
   - Normalise blank strings to `undefined` before parsing.
   - Re-export both from `packages/domain/src/index.ts`.
   - Proof: the T008 tests pass.
-- [ ] T010 [P] Create `packages/database` (`@markme/database`, private; can run alongside
+- [x] T010 [P] Create `packages/database` (`@markme/database`, private; can run alongside
       T008–T009):
   - Run `pnpm exec supabase init --workdir packages/database`, then set `project_id = "markme"`
     in `packages/database/supabase/config.toml`.
