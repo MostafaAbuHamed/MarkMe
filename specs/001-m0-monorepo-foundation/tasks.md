@@ -391,7 +391,7 @@ extension build) with one message naming every bad key, with no values (SC-005, 
 
 **Depends on**: T009 (helper), T013 and T014 (schemas exist). It does not depend on US2.
 
-- [ ] T026 [P] [US3] Write `apps/preview-api/test/env.test.ts` against `loadEnv`:
+- [x] T026 [P] [US3] Write `apps/preview-api/test/env.test.ts` against `loadEnv`:
   - `SUPABASE_URL` missing → issue `missing`.
   - `SUPABASE_URL=not-a-url` and `ftp://x` → `invalid`, expected
     "an http(s) URL, e.g. http://127.0.0.1:54321".
