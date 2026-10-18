@@ -8,7 +8,8 @@
   },
   "scripts": {
     "build": "turbo run build",
-    "lint": "turbo run lint",
+    "lint": "turbo run lint lint:root",
+    "lint:root": "eslint eslint.config.mjs",
     "typecheck": "turbo run typecheck",
     "test": "turbo run test",
     "format": "prettier --write .",
@@ -21,6 +22,8 @@
     "db:new": "supabase migration new --workdir packages/database"
   },
   "devDependencies": {
+    "@markme/config": "workspace:*",
+    "eslint": "9.39.5",
     "turbo": "2.11.9",
     "typescript": "6.0.3",
     "prettier": "3.9.10",

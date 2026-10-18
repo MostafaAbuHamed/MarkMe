@@ -101,7 +101,7 @@ fill), tests are written first and must fail before the implementation task.
     - Set every flag explicitly (R3).
   - `node.json`: extends base; `module`/`moduleResolution` `"NodeNext"`, `types: ["node"]`.
   - `react.json`: extends base; `jsx: "react-jsx"`, `lib: ["ES2023", "DOM", "DOM.Iterable"]`.
-- [ ] T005 Add the shared ESLint flat config to `packages/config/eslint/index.js`:
+- [X] T005 Add the shared ESLint flat config to `packages/config/eslint/index.js`:
   - Exports an array:
     - Ignores `**/dist`, `**/.output`, `**/.wxt`, `**/coverage`, `**/types.gen.ts`.
     - `typescript-eslint` `recommendedTypeChecked` with
