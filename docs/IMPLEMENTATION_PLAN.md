@@ -3,7 +3,7 @@
 | | |
 | --- | --- |
 | Owner | Mostafa |
-| Status | Draft v1.2 |
+| Status | Draft v1.3 |
 | Date | 2026-10-17 |
 | Inputs | [PRD.md](PRD.md), [PLAN.md](PLAN.md) v1.1, [constitution](../.specify/memory/constitution.md) v1.1.1 |
 
@@ -34,17 +34,17 @@ Each dependency is listed with its reason (constitution IV).
 
 | Tool | Version policy | Reason |
 | --- | --- | --- |
-| Node.js | 22 LTS, pinned in `.nvmrc` and `engines` | Current LTS; Cloud Run base image `node:22-slim` |
+| Node.js | 24 LTS, pinned in `.nvmrc` and `engines` | Newest LTS (22 reaches end of life 2027-04); Cloud Run base image `node:24-slim` (M0 research R1) |
 | pnpm | pinned via `packageManager` in root `package.json` (Corepack) | PRD stack; strict workspace resolution |
 | Turborepo | 2.x | PRD stack; cached `lint/typecheck/test/build` |
-| TypeScript | 5.x, `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` | Constitution: strict TS everywhere |
-| ESLint | 9 flat config + `typescript-eslint` (type-aware) + `eslint-plugin-react-hooks` + `eslint-plugin-jsx-a11y` | Shared lint; a11y lint supports VI |
+| TypeScript | 6.0.x (not 7: `typescript-eslint` supports `<6.1`), `strict`, `noUncheckedIndexedAccess`, `exactOptionalPropertyTypes` | Constitution: strict TS everywhere |
+| ESLint | 9 flat config (not 10: `jsx-a11y` supports ≤9) + `typescript-eslint` (type-aware) + `eslint-plugin-react-hooks` + `eslint-plugin-jsx-a11y` | Shared lint; a11y lint supports VI |
 | Prettier | 3.x | Shared formatting |
-| Vitest | 3.x in every package | One test runner; fast; works with WXT |
+| Vitest | 5.x in every package | One test runner; fast; works with WXT |
 | Testing Library | `@testing-library/react`, `user-event`, `vitest-axe` | Component tests + automated axe checks (PLAN DoD) |
 | Playwright | latest stable | E2E with a loaded extension (PRD 7.5) |
-| zod | 3.x (or 4 if stable when M0 starts; decide in M0 plan) | Schemas + env validation (PRD, PLAN) |
-| Supabase CLI | pinned version in CI (`supabase/setup-cli`) | Local stack, migrations, pgTAP, type generation |
+| zod | 4.x (settled in M0 plan, research R5) | Schemas + env validation (PRD, PLAN) |
+| Supabase CLI | exact-pinned root dev dependency `supabase`, same binary locally and in CI (M0 research R8) | Local stack, migrations, pgTAP, type generation |
 
 ### 1.2 Repository layout (end of v1)
 
@@ -131,9 +131,9 @@ Committed `.env.example` files list every key. Real `.env*` files are git-ignore
 
 | Job | Added in | Steps |
 | --- | --- | --- |
-| `quality` | M0 | checkout → setup pnpm + Node (cache) → `pnpm install --frozen-lockfile` → `turbo run lint typecheck test` (Turborepo local cache via `actions/cache`) |
-| `db` | M0 | `supabase/setup-cli` → `pnpm db:start` (exclude unused services: `-x studio,imgproxy,edge-runtime,logflare,vector,supavisor`) → `pnpm db:test` → `pnpm db:types` → `git diff --exit-code packages/database/src/types.gen.ts` (drift check) |
-| `secrets` | M0 | `gitleaks/gitleaks-action` on the PR diff |
+| `lint`, `typecheck`, `test` | M0 | three jobs, so each shows its own required check: checkout → setup pnpm + Node (cache) → `pnpm install --frozen-lockfile` → `turbo run <task>` (`lint` also runs `prettier --check`; Turborepo local cache via `actions/cache`) |
+| `db` | M0 | `pnpm install` (CLI is a dev dependency) → `supabase start` (exclude unused services: `-x studio,imgproxy,edge-runtime,logflare,vector,supavisor`) → `pnpm db:test` → `pnpm db:types` → `git diff --exit-code packages/database/src/types.gen.ts` (drift check) |
+| `secrets` | M0 | pinned gitleaks CLI (checksum-verified) over every commit in the PR range |
 | `preview-api-image` | M3 | `docker build apps/preview-api` (build only on PRs) |
 | `e2e` | M4 | `db:start` → start preview API → build extension → `playwright test` (Chromium, extension loaded) |
 | `bundle-secrets` | M8 | build prod extension → `node scripts/check-bundle-secrets.mjs .output/` |
@@ -284,7 +284,7 @@ Every milestone also meets the common definition of done in `PLAN.md` §1.
 
 **Technical design**
 - Root `package.json`:
-  - `"packageManager": "pnpm@<pinned>"` and `"engines": { "node": ">=22 <23" }`.
+  - `"packageManager": "pnpm@<pinned>"` and `"engines": { "node": ">=24 <25" }`.
   - Scripts `dev`, `build`, `lint`, `typecheck`, `test`, `format`, plus the `db:*` scripts in §1.3.
 - `pnpm-workspace.yaml`: `apps/*`, `packages/*`.
 - `turbo.json` tasks:
@@ -342,8 +342,7 @@ pnpm lint && pnpm typecheck && pnpm test && pnpm db:test
 CI is green, with one passing unit test and one passing pgTAP test.
 
 **Open items for `/clarify`**
-- zod 3 vs 4.
-- Whether `turbo` remote cache is needed. Default: no, and local `actions/cache` is enough.
+- Settled in `specs/001-m0-monorepo-foundation/research.md`: zod 4 (R5); no remote cache, `actions/cache` only (R6).
 
 ---
 
@@ -650,9 +649,9 @@ Error bodies are `{ error: code }` only, never internal details.
 
 **Docker and deploy**
 - `Dockerfile`:
-  - Multi-stage: `node:22-slim` builder runs `pnpm deploy --filter @markme/preview-api --prod`
+  - Multi-stage: `node:24-slim` builder runs `pnpm deploy --filter @markme/preview-api --prod`
     and compiles TS with `tsc` or `tsup`.
-  - Runtime stage `node:22-slim` runs as `USER node`, with `CMD ["node","dist/server.js"]` and a
+  - Runtime stage `node:24-slim` runs as `USER node`, with `CMD ["node","dist/server.js"]` and a
     `HEALTHCHECK` on `/healthz`.
 - `deploy-preview-api.yml` runs on push to `main` when `apps/preview-api/**`, `packages/domain/**`
   or the lockfile change:
@@ -1276,6 +1275,7 @@ milestone specs as written.
 | Secrets hygiene | M0-T8/T9, M8-T6 | gitleaks, bundle secret check |
 
 ## Changelog
+- v1.3 (2026-10-18): M0 `/speckit-plan` changes: Node 24, TS 6.0, ESLint 9 kept, Vitest 5, zod 4, Supabase CLI as dev dependency, five CI jobs, gitleaks CLI; M0 open items settled.
 - v1.2 (2026-10-18): §4 decisions approved; S0 results for Q3–Q6 (§2.4) applied to M3/M4 (lockless refresh, no `alarms`, confirm-before-sign-in, tokenless Instagram, `publish.x.com`). Q1/Q2 pending a manual run.
 - v1.1 (2026-10-17): applied plan review (Cursor, GLM 5.2 Max). Changes:
   - item_tags select/delete check both sides.
