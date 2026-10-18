@@ -193,7 +193,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
 
 ### Tests for User Story 1 (write first, confirm they fail)
 
-- [ ] T011 [P] [US1] Write `apps/preview-api/test/healthz.test.ts`:
+- [x] T011 [P] [US1] Write `apps/preview-api/test/healthz.test.ts`:
   - Use `supertest` against `createApp()` from `apps/preview-api/src/app.ts`.
   - `GET /healthz` returns 200, `content-type` application/json, and body exactly `{ ok: true }`
     (contracts/preview-api.openapi.yaml).
