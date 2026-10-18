@@ -1,1 +1,0 @@
-service_api_key = "GvMKbehb9i7phZiRHC6Q8r71nQWhKtrUiWSuVQ4T"
