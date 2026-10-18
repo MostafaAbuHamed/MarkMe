@@ -163,3 +163,11 @@ five jobs), workflow run `39110291727`.
 | Clean PR under 10 min (SC-004) | pass   | Whole run 2 m 3 s (08:08:20 → 08:10:23 UTC); jobs run in parallel                      |
 | No stored secrets (FR-016)     | pass   | `ci.yml` has no `secrets.*` reference; permissions are `contents: read`                |
 | Results reused (US-2 #6)       | pass   | Re-run (attempt 2): Turbo `5/5`, `4/4`, `2/2` cached, `FULL TURBO` in all three jobs   |
+
+### Merge blocking (T024, 2026-10-18)
+
+Ruleset `ci-gate` applied with the command in V5 step 2. Ruleset id **25337047**, enforcement
+`active`, no bypass actors. `gh api repos/MostafaAbuHamed/MarkMe/rules/branches/<branch>` returns
+`deletion, non_fast_forward, pull_request, required_status_checks` for both `main` and
+`001-m0-monorepo-foundation`. It returns nothing for the per-task branches (`m0/t0NN-*`), which are
+not milestone branches.

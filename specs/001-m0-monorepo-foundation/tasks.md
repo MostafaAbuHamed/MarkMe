@@ -365,7 +365,7 @@ studio,imgproxy,edge-runtime,logflare,vector,supavisor`
   - Re-run the jobs and confirm `cache hit` in the Turbo output of `lint`/`typecheck`/`test`
     (US-2 #6).
   - Note the results in the PR description.
-- [ ] T024 [US2] The owner makes the repository public if it is not already. Then apply the
+- [x] T024 [US2] The owner makes the repository public if it is not already. Then apply the
       `ci-gate` ruleset with the `gh api` command in quickstart.md V5 step 2, and verify it with
       `gh api repos/{owner}/{repo}/rulesets` (FR-012). Record the ruleset id in
       `specs/001-m0-monorepo-foundation/quickstart.md` under V5.
