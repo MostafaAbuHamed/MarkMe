@@ -210,7 +210,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
 
 ### Implementation for User Story 1
 
-- [ ] T013 [US1] Create `apps/preview-api` (`@markme/preview-api`, private):
+- [x] T013 [US1] Create `apps/preview-api` (`@markme/preview-api`, private):
   - `package.json`:
     - dependencies `express`, `@markme/domain` (`workspace:*`), `zod`.
     - devDependencies `tsx`, `@types/express`, `@types/node`, `vitest`, `supertest`,
@@ -238,7 +238,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
   - `apps/preview-api/.env.example` contains `PORT=8787` and
     `SUPABASE_URL=http://127.0.0.1:54321`, each with a one-line comment.
   - Proof: the T011 tests pass.
-- [ ] T014 [P] [US1] Create `apps/extension` (`@markme/extension`, private):
+- [x] T014 [P] [US1] Create `apps/extension` (`@markme/extension`, private):
   - `package.json`:
     - dependencies `react`, `react-dom`, `@markme/domain` (`workspace:*`), `zod`.
     - devDependencies `wxt`, `@wxt-dev/module-react`, `@types/react`, `@types/react-dom`,
@@ -248,7 +248,8 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
   - `apps/extension/src/lib/env.ts`: the zod object from contracts/app-config.md, with each
     `.describe()` verbatim:
     - `WXT_SUPABASE_URL`: `z.url({ protocol: /^https?$/ })`.
-    - `WXT_SUPABASE_ANON_KEY`: `z.string().min(20)`.
+    - `WXT_SUPABASE_ANON_KEY`: `z.string().min(20)` plus a refine that rejects any
+      `replace-with-…` value.
     - `WXT_PREVIEW_API_URL`: `z.url({ protocol: /^https?$/ })`.
     - All are required. **No other key** (FR-022).
     - Export the schema as `extensionEnvSchema`, plus `env = parseEnv(extensionEnvSchema,
@@ -269,14 +270,14 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
     - `WXT_PREVIEW_API_URL=http://127.0.0.1:8787`
   - Proof: with a filled `.env`, `pnpm --filter @markme/extension build` produces
     `apps/extension/.output/chrome-mv3`.
-- [ ] T015 [US1] Implement `scripts/dev-env.mjs`:
+- [x] T015 [US1] Implement `scripts/dev-env.mjs`:
   - Export `parseStatusEnv`, `fillExample`, `ensureEnvFile` (write with `{ flag: "wx" }`; treat
     `EEXIST` as `"found"`) and the per-app fill map:
     - preview-api: `SUPABASE_URL ← API_URL`.
     - extension: `WXT_SUPABASE_URL ← API_URL`, `WXT_SUPABASE_ANON_KEY ← ANON_KEY`,
       `WXT_PREVIEW_API_URL ← http://127.0.0.1:8787`.
   - Proof: the T012 tests pass via root `pnpm test`.
-- [ ] T016 [US1] Implement `scripts/dev.mjs` (plain Node ESM, no dependencies) and add root script
+- [x] T016 [US1] Implement `scripts/dev.mjs` (plain Node ESM, no dependencies) and add root script
       `"dev": "node scripts/dev.mjs"` to `/package.json`. Follow the sequence and messages in
       contracts/root-commands.md (R17):
   1. Preflight: Node major 24; `docker info` succeeds. On failure print the exact one-line message
@@ -289,7 +290,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
   4. Print the address summary.
   5. Spawn `pnpm turbo run dev --filter=@markme/preview-api --filter=@markme/extension
 --ui=stream`. Forward SIGINT/SIGTERM and exit with the child's code. Never stop the database.
-- [ ] T017 [US1] Write `/README.md` (FR-010):
+- [x] T017 [US1] Write `/README.md` (FR-010):
   - What MarkMe is, in one line.
   - Prerequisites table copied from quickstart.md, including `fnm`/`nvm` for Node 24 and
     `corepack enable`.
@@ -301,7 +302,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
   - How to refresh stale `.env` files (delete and rerun `pnpm dev`).
   - The root command table from contracts/root-commands.md.
   - No real or demo keys anywhere in the README.
-- [ ] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
+- [x] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
       temp dir):
   - Record first-run and second-run times (SC-001: < 15 min / < 2 min).
   - Check every edge-case row in V2.
@@ -323,7 +324,7 @@ deliberate faults fails only its matching check.
 **Depends on**: Phase 2 (the commands the checks run). It does not depend on US1. The CI file can
 be written in parallel with Phase 3.
 
-- [ ] T019 [P] [US2] Create `/.gitleaks.toml`:
+- [x] T019 [P] [US2] Create `/.gitleaks.toml`:
   - `title = "markme"`.
   - `[extend] useDefault = true`.
   - `[allowlist]` `description = "placeholder values in .env.example"` with
@@ -332,7 +333,7 @@ be written in parallel with Phase 3.
     `gitleaks git --config .gitleaks.toml --redact --verbose` on the branch history.
   - It must pass on the current history and fail on a temporary commit that adds
     `AKIA` + 16 uppercase alphanumerics in a new file. Drop that commit afterwards.
-- [ ] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
+- [x] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
       `concurrency` and the three Turbo jobs `lint`, `typecheck` and `test`, exactly per
       contracts/ci-checks.md:
   - Steps: `actions/checkout` → `pnpm/action-setup` (version from `packageManager`) →
@@ -402,8 +403,8 @@ extension build) with one message naming every bad key, with no values (SC-005, 
 - [ ] T027 [P] [US3] Write `apps/extension/src/lib/env.test.ts` against `extensionEnvSchema` via
       `parseEnv`:
   - Each of `WXT_SUPABASE_URL`, `WXT_SUPABASE_ANON_KEY` and `WXT_PREVIEW_API_URL` is tested
-    missing and invalid. The anon key's invalid case is `replace-with-local-anon-key`, which has
-    fewer than 20 characters.
+    missing and invalid. The anon key's invalid case is `replace-with-local-anon-key`; the
+    placeholder is rejected by the refine.
   - All three bad at once → one error with three issues.
   - **Key-set lock**:
     `expect(Object.keys(extensionEnvSchema.shape).sort()).toEqual(["WXT_PREVIEW_API_URL",
