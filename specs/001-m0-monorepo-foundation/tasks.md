@@ -142,7 +142,7 @@ the local database harness (used by US1 and the US2 `db` check).
   - `packages/domain/src/index.ts` exports `export const DOMAIN_PACKAGE = "@markme/domain";`.
   - `packages/domain/src/index.test.ts` asserts that value (FR-013).
   - Proof: `pnpm test` runs 1 passing test.
-- [ ] T008 Write the failing tests for the env helper in
+- [x] T008 Write the failing tests for the env helper in
       `packages/domain/src/env/parse-env.test.ts`, per contracts/env-helper.md:
   - Valid input returns typed values (with default `PORT` applied and coerced to a number).
   - A missing required key gives `kind: "missing"`; `""` and `"   "` also count as missing.
