@@ -290,7 +290,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
   4. Print the address summary.
   5. Spawn `pnpm turbo run dev --filter=@markme/preview-api --filter=@markme/extension
 --ui=stream`. Forward SIGINT/SIGTERM and exit with the child's code. Never stop the database.
-- [ ] T017 [US1] Write `/README.md` (FR-010):
+- [x] T017 [US1] Write `/README.md` (FR-010):
   - What MarkMe is, in one line.
   - Prerequisites table copied from quickstart.md, including `fnm`/`nvm` for Node 24 and
     `corepack enable`.
