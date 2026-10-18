@@ -7,3 +7,8 @@ engineStrict: true
 # Repeat installs must still reject the wrong Node. pnpm's default
 # optimisticRepeatInstall short-circuits before the engines check.
 optimisticRepeatInstall: false
+
+# tsx (preview-api dev) and vitest/vite need esbuild's postinstall to select
+# the platform binary. pnpm blocks that script unless it is allowlisted (R2).
+allowBuilds:
+  esbuild: true
