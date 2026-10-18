@@ -302,7 +302,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
   - How to refresh stale `.env` files (delete and rerun `pnpm dev`).
   - The root command table from contracts/root-commands.md.
   - No real or demo keys anywhere in the README.
-- [ ] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
+- [x] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
       temp dir):
   - Record first-run and second-run times (SC-001: < 15 min / < 2 min).
   - Check every edge-case row in V2.
