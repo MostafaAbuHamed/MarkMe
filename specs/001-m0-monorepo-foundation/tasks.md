@@ -333,7 +333,7 @@ be written in parallel with Phase 3.
     `gitleaks git --config .gitleaks.toml --redact --verbose` on the branch history.
   - It must pass on the current history and fail on a temporary commit that adds
     `AKIA` + 16 uppercase alphanumerics in a new file. Drop that commit afterwards.
-- [ ] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
+- [x] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
       `concurrency` and the three Turbo jobs `lint`, `typecheck` and `test`, exactly per
       contracts/ci-checks.md:
   - Steps: `actions/checkout` → `pnpm/action-setup` (version from `packageManager`) →
