@@ -270,14 +270,14 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
     - `WXT_PREVIEW_API_URL=http://127.0.0.1:8787`
   - Proof: with a filled `.env`, `pnpm --filter @markme/extension build` produces
     `apps/extension/.output/chrome-mv3`.
-- [ ] T015 [US1] Implement `scripts/dev-env.mjs`:
+- [x] T015 [US1] Implement `scripts/dev-env.mjs`:
   - Export `parseStatusEnv`, `fillExample`, `ensureEnvFile` (write with `{ flag: "wx" }`; treat
     `EEXIST` as `"found"`) and the per-app fill map:
     - preview-api: `SUPABASE_URL ← API_URL`.
     - extension: `WXT_SUPABASE_URL ← API_URL`, `WXT_SUPABASE_ANON_KEY ← ANON_KEY`,
       `WXT_PREVIEW_API_URL ← http://127.0.0.1:8787`.
   - Proof: the T012 tests pass via root `pnpm test`.
-- [ ] T016 [US1] Implement `scripts/dev.mjs` (plain Node ESM, no dependencies) and add root script
+- [x] T016 [US1] Implement `scripts/dev.mjs` (plain Node ESM, no dependencies) and add root script
       `"dev": "node scripts/dev.mjs"` to `/package.json`. Follow the sequence and messages in
       contracts/root-commands.md (R17):
   1. Preflight: Node major 24; `docker info` succeeds. On failure print the exact one-line message
@@ -290,7 +290,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
   4. Print the address summary.
   5. Spawn `pnpm turbo run dev --filter=@markme/preview-api --filter=@markme/extension
 --ui=stream`. Forward SIGINT/SIGTERM and exit with the child's code. Never stop the database.
-- [ ] T017 [US1] Write `/README.md` (FR-010):
+- [x] T017 [US1] Write `/README.md` (FR-010):
   - What MarkMe is, in one line.
   - Prerequisites table copied from quickstart.md, including `fnm`/`nvm` for Node 24 and
     `corepack enable`.
@@ -302,7 +302,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
   - How to refresh stale `.env` files (delete and rerun `pnpm dev`).
   - The root command table from contracts/root-commands.md.
   - No real or demo keys anywhere in the README.
-- [ ] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
+- [x] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
       temp dir):
   - Record first-run and second-run times (SC-001: < 15 min / < 2 min).
   - Check every edge-case row in V2.
@@ -324,7 +324,7 @@ deliberate faults fails only its matching check.
 **Depends on**: Phase 2 (the commands the checks run). It does not depend on US1. The CI file can
 be written in parallel with Phase 3.
 
-- [ ] T019 [P] [US2] Create `/.gitleaks.toml`:
+- [x] T019 [P] [US2] Create `/.gitleaks.toml`:
   - `title = "markme"`.
   - `[extend] useDefault = true`.
   - `[allowlist]` `description = "placeholder values in .env.example"` with
@@ -333,7 +333,7 @@ be written in parallel with Phase 3.
     `gitleaks git --config .gitleaks.toml --redact --verbose` on the branch history.
   - It must pass on the current history and fail on a temporary commit that adds
     `AKIA` + 16 uppercase alphanumerics in a new file. Drop that commit afterwards.
-- [ ] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
+- [x] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
       `concurrency` and the three Turbo jobs `lint`, `typecheck` and `test`, exactly per
       contracts/ci-checks.md:
   - Steps: `actions/checkout` → `pnpm/action-setup` (version from `packageManager`) →
