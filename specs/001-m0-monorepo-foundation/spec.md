@@ -17,7 +17,7 @@
 - Q: Which operating systems must the one-command setup be proven to work on? → A: Linux only (supported and verified). macOS likely works but is not promised; native Windows is out of scope; WSL users follow the Linux steps.
 - Q: Before the repository goes public, should the secret check also scan the whole existing git history once? → A: No. The pull-request scan only (FR-015 as written); no one-time history scan and no push scan.
 
-## User Scenarios & Testing *(mandatory)*
+## User Scenarios & Testing _(mandatory)_
 
 The users of this milestone are **contributors**: the project owner and the AI coding agents that
 implement later milestones. Reviewers of pull requests are a second audience. No end user of
@@ -152,7 +152,7 @@ Confirm it exits without serving anything and that the message names both settin
 - **Pull request from a fork or without access to repository secrets**: the checks still run,
   because none of them need stored secrets.
 
-## Requirements *(mandatory)*
+## Requirements _(mandatory)_
 
 ### Functional Requirements
 
@@ -241,7 +241,7 @@ Confirm it exits without serving anything and that the message names both settin
 - **Local stack**: the set of services the start command runs together: database and auth, preview
   service, extension development build.
 
-## Success Criteria *(mandatory)*
+## Success Criteria _(mandatory)_
 
 ### Measurable Outcomes
 

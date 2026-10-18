@@ -1,0 +1,11 @@
+pnpm-lock.yaml
+**/.output
+**/.wxt
+**/dist
+**/coverage
+**/node_modules
+.specify
+.claude
+.cursor
+.opencode
+spike
