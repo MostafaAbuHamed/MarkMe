@@ -77,26 +77,26 @@ one smoke pgTAP test.
 
 ## Constitution Check
 
-*GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design (below).*
+_GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design (below)._
 
-| Principle / constraint | How M0 complies | Status |
-| --- | --- | --- |
-| I. RLS on every user-data table | No tables in M0; the pgTAP harness is ready for M1 (FR-014, SC-007) | ✅ n/a |
-| I. Ownership from `auth.uid()` | No data access in M0 | ✅ n/a |
-| I. Preview fetching only in `apps/preview-api`; SSRF tests first | No fetcher in M0. The API has only `/healthz` (FR-008) | ✅ n/a |
-| I. Secrets only in env and secret store; service-role key never in a client; none in git | `.env*` git-ignored except `.env.example`. `dev.mjs` copies only `API_URL` and `ANON_KEY` (allowlist). The extension schema is locked to three public keys by a test. gitleaks runs on every PR commit. Error messages never print values | ✅ |
-| II. Package ownership (`database` = migrations/types, `domain` = zod/rules, `config` = tsconfig/ESLint/Prettier) | As listed. `parseEnv` is a zod helper, so it lives in `domain`; `config` stays tooling-only (R11) | ✅ |
-| II. No shared Supabase client instance; factory only | No client is created in M0. The factory arrives in M2 | ✅ n/a |
-| III. Required tests; never weaken tests | The placeholder unit test, env tests for every key (SC-005), the `/healthz` test and the pgTAP smoke test. CI fails on any failure | ✅ |
-| IV. Simple first; every new dependency has a reason | The two additions (`supabase` dev dep, `supertest`) are justified in R8 and R14. No `dotenv` (Node built-in), no `concurrently` (Turbo), no env library (R11). Tool majors follow peer constraints, not novelty (R3, R4) | ✅ |
-| IV. YAGNI, non-goals out | No web or mobile apps (FR-001). No permissions in the manifest. `SUPABASE_URL` in the API is the only forward key, kept because M3 needs it and US-3 needs a required URL | ✅ |
-| V. Data integrity | No data in M0 | ✅ n/a |
-| VI. Quality UX | The popup is a non-product placeholder. `frontend-design`/`impeccable` apply from M4. Contributor UX is one-line errors with fixes | ✅ |
-| Tech: pnpm + Turborepo, strict TS, layout `apps/*`, `packages/*` | Yes | ✅ |
-| Tech: WXT + React MV3, minimal permissions | WXT 0.21 + React 19, zero permissions in M0 | ✅ |
-| Tech: Express, Supabase CLI + Docker locally | Yes | ✅ |
-| Workflow: one branch per milestone, one commit and one PR per task, CI on every PR, `pnpm dev` keeps working | The ruleset covers `main` + `[0-9][0-9][0-9]-*`. The CI triggers on all PR bases | ✅ |
-| Free tiers | Public repo; GitHub Actions free; no remote cache or paid service | ✅ |
+| Principle / constraint                                                                                           | How M0 complies                                                                                                                                                                                                                           | Status |
+| ---------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------ |
+| I. RLS on every user-data table                                                                                  | No tables in M0; the pgTAP harness is ready for M1 (FR-014, SC-007)                                                                                                                                                                       | ✅ n/a |
+| I. Ownership from `auth.uid()`                                                                                   | No data access in M0                                                                                                                                                                                                                      | ✅ n/a |
+| I. Preview fetching only in `apps/preview-api`; SSRF tests first                                                 | No fetcher in M0. The API has only `/healthz` (FR-008)                                                                                                                                                                                    | ✅ n/a |
+| I. Secrets only in env and secret store; service-role key never in a client; none in git                         | `.env*` git-ignored except `.env.example`. `dev.mjs` copies only `API_URL` and `ANON_KEY` (allowlist). The extension schema is locked to three public keys by a test. gitleaks runs on every PR commit. Error messages never print values | ✅     |
+| II. Package ownership (`database` = migrations/types, `domain` = zod/rules, `config` = tsconfig/ESLint/Prettier) | As listed. `parseEnv` is a zod helper, so it lives in `domain`; `config` stays tooling-only (R11)                                                                                                                                         | ✅     |
+| II. No shared Supabase client instance; factory only                                                             | No client is created in M0. The factory arrives in M2                                                                                                                                                                                     | ✅ n/a |
+| III. Required tests; never weaken tests                                                                          | The placeholder unit test, env tests for every key (SC-005), the `/healthz` test and the pgTAP smoke test. CI fails on any failure                                                                                                        | ✅     |
+| IV. Simple first; every new dependency has a reason                                                              | The two additions (`supabase` dev dep, `supertest`) are justified in R8 and R14. No `dotenv` (Node built-in), no `concurrently` (Turbo), no env library (R11). Tool majors follow peer constraints, not novelty (R3, R4)                  | ✅     |
+| IV. YAGNI, non-goals out                                                                                         | No web or mobile apps (FR-001). No permissions in the manifest. `SUPABASE_URL` in the API is the only forward key, kept because M3 needs it and US-3 needs a required URL                                                                 | ✅     |
+| V. Data integrity                                                                                                | No data in M0                                                                                                                                                                                                                             | ✅ n/a |
+| VI. Quality UX                                                                                                   | The popup is a non-product placeholder. `frontend-design`/`impeccable` apply from M4. Contributor UX is one-line errors with fixes                                                                                                        | ✅     |
+| Tech: pnpm + Turborepo, strict TS, layout `apps/*`, `packages/*`                                                 | Yes                                                                                                                                                                                                                                       | ✅     |
+| Tech: WXT + React MV3, minimal permissions                                                                       | WXT 0.21 + React 19, zero permissions in M0                                                                                                                                                                                               | ✅     |
+| Tech: Express, Supabase CLI + Docker locally                                                                     | Yes                                                                                                                                                                                                                                       | ✅     |
+| Workflow: one branch per milestone, one commit and one PR per task, CI on every PR, `pnpm dev` keeps working     | The ruleset covers `main` + `[0-9][0-9][0-9]-*`. The CI triggers on all PR bases                                                                                                                                                          | ✅     |
+| Free tiers                                                                                                       | Public repo; GitHub Actions free; no remote cache or paid service                                                                                                                                                                         | ✅     |
 
 **Gate result: PASS.** There are no violations, so Complexity Tracking is empty.
 
@@ -193,17 +193,17 @@ These follow IMPLEMENTATION_PLAN M0-T1…T9. The design changes only:
 - T8 has five jobs.
 - T9 adds the ruleset step.
 
-| Task | Content | Proof |
-| --- | --- | --- |
-| T1 | Root workspace files, `.nvmrc`, pnpm settings, `turbo.json` | `pnpm install` ok; wrong Node fails |
-| T2 | `packages/config` + root ESLint/Prettier wiring | `pnpm lint && pnpm format:check` pass |
-| T3 | `packages/domain` (placeholder + `parseEnv` + tests), `packages/database` skeleton | `pnpm test` runs; env-helper guarantees tested |
-| T4 | `apps/preview-api` with `/healthz`, env schema, `EADDRINUSE` message | Tests: every key missing/invalid; `/healthz` → `{ok:true}` |
-| T5 | `apps/extension` WXT popup, env schema, build-time validation | `pnpm --filter @markme/extension build` → `.output/chrome-mv3`; bad env fails the build |
-| T6 | `supabase init` in `packages/database`, smoke pgTAP, `db:*` scripts, `types.gen.ts` | `pnpm db:start && pnpm db:test` pass |
-| T7 | `scripts/dev.mjs` + root `dev` | quickstart V1, V2 |
-| T8 | `ci.yml` with five jobs | PR shows five green checks; fault PRs (SC-003) |
-| T9 | `.env.example` files, `.gitleaks.toml`, README, ruleset applied, update `CLAUDE.md` commands | quickstart V3–V5; README verbatim on a fresh clone |
+| Task | Content                                                                                      | Proof                                                                                   |
+| ---- | -------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------- |
+| T1   | Root workspace files, `.nvmrc`, pnpm settings, `turbo.json`                                  | `pnpm install` ok; wrong Node fails                                                     |
+| T2   | `packages/config` + root ESLint/Prettier wiring                                              | `pnpm lint && pnpm format:check` pass                                                   |
+| T3   | `packages/domain` (placeholder + `parseEnv` + tests), `packages/database` skeleton           | `pnpm test` runs; env-helper guarantees tested                                          |
+| T4   | `apps/preview-api` with `/healthz`, env schema, `EADDRINUSE` message                         | Tests: every key missing/invalid; `/healthz` → `{ok:true}`                              |
+| T5   | `apps/extension` WXT popup, env schema, build-time validation                                | `pnpm --filter @markme/extension build` → `.output/chrome-mv3`; bad env fails the build |
+| T6   | `supabase init` in `packages/database`, smoke pgTAP, `db:*` scripts, `types.gen.ts`          | `pnpm db:start && pnpm db:test` pass                                                    |
+| T7   | `scripts/dev.mjs` + root `dev`                                                               | quickstart V1, V2                                                                       |
+| T8   | `ci.yml` with five jobs                                                                      | PR shows five green checks; fault PRs (SC-003)                                          |
+| T9   | `.env.example` files, `.gitleaks.toml`, README, ruleset applied, update `CLAUDE.md` commands | quickstart V3–V5; README verbatim on a fresh clone                                      |
 
 ## Post-design Constitution Check
 

@@ -27,13 +27,13 @@ export function parseEnv<S extends z.ZodObject>(
 
 ## Behaviour
 
-| Input | Result |
-| --- | --- |
-| All keys valid | Returns the parsed, typed object (defaults applied, coerced numbers) |
-| A required key `undefined` or `""` | Issue `{ kind: "missing" }`. An empty string counts as missing |
-| A key present but failing its format | Issue `{ kind: "invalid", expected: <description> }` |
-| Several bad keys | One `EnvError` with every issue (never throws on the first) |
-| Keys not in the schema | Ignored. `process.env` holds many unrelated keys |
+| Input                                | Result                                                               |
+| ------------------------------------ | -------------------------------------------------------------------- |
+| All keys valid                       | Returns the parsed, typed object (defaults applied, coerced numbers) |
+| A required key `undefined` or `""`   | Issue `{ kind: "missing" }`. An empty string counts as missing       |
+| A key present but failing its format | Issue `{ kind: "invalid", expected: <description> }`                 |
+| Several bad keys                     | One `EnvError` with every issue (never throws on the first)          |
+| Keys not in the schema               | Ignored. `process.env` holds many unrelated keys                     |
 
 ## Message format (exact)
 

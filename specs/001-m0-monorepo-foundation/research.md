@@ -305,7 +305,7 @@ rule).
      (`http://127.0.0.1:8787/healthz`), the extension output folder, and `pnpm db:stop` to stop the
      database.
   5. **Apps**: spawn `turbo run dev --filter=@markme/preview-api --filter=@markme/extension
-     --ui=stream`. Turbo prefixes each line with the package name (edge case: crash visibility).
+--ui=stream`. Turbo prefixes each line with the package name (edge case: crash visibility).
      Forward SIGINT/SIGTERM. The database keeps running (spec assumption).
 - **Rationale**: the §3 M0 design, plus the clarifications and edge cases. No `concurrently`
   dependency is needed, because Turbo already runs persistent tasks in parallel.
@@ -326,15 +326,15 @@ rule).
 
 ## Resolved summary
 
-| Unknown | Resolution |
-| --- | --- |
-| zod 3 vs 4 | zod 4 (R5) |
-| Remote cache | none; `actions/cache` on `.turbo/cache` (R6) |
-| Node version | 24 LTS (R1) |
-| TS / ESLint majors | TS 6.0, ESLint 9, because of peer ranges (R3, R4) |
-| Five visible checks | five jobs (R7) |
-| CLI distribution | `supabase` dev dependency (R8) |
-| Secret scan method | pinned gitleaks CLI over the PR commit range (R12) |
-| Merge blocking | repository ruleset on `main` + `[0-9][0-9][0-9]-*` (R13) |
+| Unknown             | Resolution                                               |
+| ------------------- | -------------------------------------------------------- |
+| zod 3 vs 4          | zod 4 (R5)                                               |
+| Remote cache        | none; `actions/cache` on `.turbo/cache` (R6)             |
+| Node version        | 24 LTS (R1)                                              |
+| TS / ESLint majors  | TS 6.0, ESLint 9, because of peer ranges (R3, R4)        |
+| Five visible checks | five jobs (R7)                                           |
+| CLI distribution    | `supabase` dev dependency (R8)                           |
+| Secret scan method  | pinned gitleaks CLI over the PR commit range (R12)       |
+| Merge blocking      | repository ruleset on `main` + `[0-9][0-9][0-9]-*` (R13) |
 
 No `NEEDS CLARIFICATION` remains.
