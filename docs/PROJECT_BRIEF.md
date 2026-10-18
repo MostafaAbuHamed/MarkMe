@@ -12,16 +12,16 @@ MarkMe is a portfolio project delivered incrementally:
 
 ## Technology Decisions
 
-| Area | Technology | Purpose |
-| --- | --- | --- |
-| Monorepo | pnpm and Turborepo | Manage applications and shared packages |
-| Chrome extension | React and WXT | Build the Manifest V3 extension on Vite |
-| Web application | Next.js | Provide browser-based collection management |
-| Mobile application | React Native and Expo | Provide iOS and Android clients |
-| Preview backend | Express.js in Docker | Safely retrieve link metadata |
-| Data platform | Supabase | PostgreSQL, authentication, and realtime events |
-| Language | TypeScript | Use one language across the project |
-| Local infrastructure | Supabase CLI and Docker | Provide reproducible local development |
+| Area                 | Technology              | Purpose                                         |
+| -------------------- | ----------------------- | ----------------------------------------------- |
+| Monorepo             | pnpm and Turborepo      | Manage applications and shared packages         |
+| Chrome extension     | React and WXT           | Build the Manifest V3 extension on Vite         |
+| Web application      | Next.js                 | Provide browser-based collection management     |
+| Mobile application   | React Native and Expo   | Provide iOS and Android clients                 |
+| Preview backend      | Express.js in Docker    | Safely retrieve link metadata                   |
+| Data platform        | Supabase                | PostgreSQL, authentication, and realtime events |
+| Language             | TypeScript              | Use one language across the project             |
+| Local infrastructure | Supabase CLI and Docker | Provide reproducible local development          |
 
 ## Architecture Guidelines
 

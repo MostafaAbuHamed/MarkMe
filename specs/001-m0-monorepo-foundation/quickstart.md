@@ -6,13 +6,13 @@ This is a runbook that proves each user story and success criterion. Contracts:
 
 ## Prerequisites (Linux)
 
-| Tool | Version | Check |
-| --- | --- | --- |
-| Node.js | 24 LTS (`.nvmrc`); use `fnm` or `nvm` | `node -v` → `v24.*` |
-| pnpm | from `packageManager` (enable with `corepack enable`, or install pnpm 12) | `pnpm -v` → `12.14.0` |
-| Docker Engine | running | `docker info` exits 0 |
-| Git | any recent | |
-| Chromium-based browser | for loading the unpacked extension | |
+| Tool                   | Version                                                                   | Check                 |
+| ---------------------- | ------------------------------------------------------------------------- | --------------------- |
+| Node.js                | 24 LTS (`.nvmrc`); use `fnm` or `nvm`                                     | `node -v` → `v24.*`   |
+| pnpm                   | from `packageManager` (enable with `corepack enable`, or install pnpm 12) | `pnpm -v` → `12.14.0` |
+| Docker Engine          | running                                                                   | `docker info` exits 0 |
+| Git                    | any recent                                                                |                       |
+| Chromium-based browser | for loading the unpacked extension                                        |                       |
 
 No global Supabase CLI is needed. It is a pinned dev dependency (research R8).
 
@@ -49,12 +49,12 @@ Then:
 
 ## V2: edge cases
 
-| Do | Expect |
-| --- | --- |
-| `sudo systemctl stop docker`; `pnpm dev` | the Docker message, exit 1, no stack trace |
-| `fnm use 26`; `pnpm install` | engine error naming Node 24 |
+| Do                                          | Expect                                     |
+| ------------------------------------------- | ------------------------------------------ |
+| `sudo systemctl stop docker`; `pnpm dev`    | the Docker message, exit 1, no stack trace |
+| `fnm use 26`; `pnpm install`                | engine error naming Node 24                |
 | `python3 -m http.server 8787 &`; `pnpm dev` | `preview-api: port 8787 is already in use` |
-| `git status` after `pnpm dev` | no `.env` files listed (FR-021) |
+| `git status` after `pnpm dev`               | no `.env` files listed (FR-021)            |
 
 ## V3: configuration validation (US-3, SC-005)
 

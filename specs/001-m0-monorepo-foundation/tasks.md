@@ -26,30 +26,30 @@ fill), tests are written first and must fail before the implementation task.
 - One task = one commit = one PR into `001-m0-monorepo-foundation`. Use Conventional Commits.
 - Exact versions (all checked 2026-10-18):
 
-  | Package | Version |
-  | --- | --- |
-  | pnpm | 12.14.0 |
-  | turbo | 2.11.9 |
-  | typescript | 6.0.3 |
-  | prettier | 3.9.10 |
-  | supabase | 2.121.0 |
-  | eslint | 9.39.5 |
-  | typescript-eslint | 8.71.2 |
-  | eslint-plugin-react-hooks | 7.1.1 |
-  | eslint-plugin-jsx-a11y | 6.10.2 |
-  | eslint-config-prettier | 10.1.8 |
-  | globals | 17.13.0 |
-  | zod | 4.6.7 |
-  | vitest | 5.0.5 |
-  | express | 5.3.0 |
-  | @types/express | 5.0.6 |
-  | tsx | 4.23.15 |
-  | supertest | 7.3.1 |
-  | @types/node | 24.19.2 |
-  | wxt | 0.21.4 |
-  | @wxt-dev/module-react | 1.2.2 |
-  | react / react-dom | 19.3.1 |
-  | gitleaks | 8.30.1 |
+  | Package                   | Version |
+  | ------------------------- | ------- |
+  | pnpm                      | 12.14.0 |
+  | turbo                     | 2.11.9  |
+  | typescript                | 6.0.3   |
+  | prettier                  | 3.9.10  |
+  | supabase                  | 2.121.0 |
+  | eslint                    | 9.39.5  |
+  | typescript-eslint         | 8.71.2  |
+  | eslint-plugin-react-hooks | 7.1.1   |
+  | eslint-plugin-jsx-a11y    | 6.10.2  |
+  | eslint-config-prettier    | 10.1.8  |
+  | globals                   | 17.13.0 |
+  | zod                       | 4.6.7   |
+  | vitest                    | 5.0.5   |
+  | express                   | 5.3.0   |
+  | @types/express            | 5.0.6   |
+  | tsx                       | 4.23.15 |
+  | supertest                 | 7.3.1   |
+  | @types/node               | 24.19.2 |
+  | wxt                       | 0.21.4  |
+  | @wxt-dev/module-react     | 1.2.2   |
+  | react / react-dom         | 19.3.1  |
+  | gitleaks                  | 8.30.1  |
 
 - Pin dev tools exactly (no `^`). `zod`, `express` and `react` use `^` within the major.
 - **Never** use TypeScript 7 or ESLint 10 (R3, R4).
@@ -65,7 +65,7 @@ fill), tests are written first and must fail before the implementation task.
 
 **Purpose**: the workspace root and shared tooling config. Nothing runs yet.
 
-- [X] T001 Create the root workspace files:
+- [x] T001 Create the root workspace files:
   - `package.json`: `"name": "markme"`, `"private": true`, `"type": "module"`,
     `"packageManager": "pnpm@12.14.0"`, `"engines": { "node": ">=24 <25" }`.
   - Root scripts exactly as in contracts/root-commands.md, **except** `dev` (added in T016):
@@ -78,20 +78,20 @@ fill), tests are written first and must fail before the implementation task.
   - `.nvmrc` containing `24`.
   - Run `pnpm install` to produce `pnpm-lock.yaml`.
   - Proof: `pnpm install` succeeds on Node 24, and fails with an engine error on Node 26.
-- [X] T002 [P] Fix the anchoring in `/.gitignore`:
+- [x] T002 [P] Fix the anchoring in `/.gitignore`:
   - Replace `supabase/.temp/` and `supabase/.branches/` with `**/supabase/.temp/` and
     `**/supabase/.branches/` (plan, Structure Decision).
   - Proof: `git check-ignore -v --no-index packages/database/supabase/.temp/x` prints the rule.
   - Also confirm that `git check-ignore --no-index apps/extension/.env` matches and
     `apps/extension/.env.example` does not.
-- [X] T003 Create `/turbo.json` (Turborepo 2 schema):
+- [x] T003 Create `/turbo.json` (Turborepo 2 schema):
   - `build`: `dependsOn: ["^build"]`, outputs `["dist/**", ".output/**"]`.
   - `dev`: `cache: false`, `persistent: true`.
   - `lint`: outputs `[]`.
   - `typecheck`: outputs `[]`.
   - `test`: outputs `["coverage/**"]`.
   - Internal packages ship TS source, so `lint`/`typecheck` need no `^build`.
-- [X] T004 Create `packages/config` (`@markme/config`, private):
+- [x] T004 Create `packages/config` (`@markme/config`, private):
   - `package.json` with `exports` for `./tsconfig/base.json`, `./tsconfig/node.json`,
     `./tsconfig/react.json`, `./eslint`, `./prettier`.
   - `packages/config/tsconfig/base.json`:
@@ -101,7 +101,7 @@ fill), tests are written first and must fail before the implementation task.
     - Set every flag explicitly (R3).
   - `node.json`: extends base; `module`/`moduleResolution` `"NodeNext"`, `types: ["node"]`.
   - `react.json`: extends base; `jsx: "react-jsx"`, `lib: ["ES2023", "DOM", "DOM.Iterable"]`.
-- [X] T005 Add the shared ESLint flat config to `packages/config/eslint/index.js`:
+- [x] T005 Add the shared ESLint flat config to `packages/config/eslint/index.js`:
   - Exports an array:
     - Ignores `**/dist`, `**/.output`, `**/.wxt`, `**/coverage`, `**/types.gen.ts`.
     - `typescript-eslint` `recommendedTypeChecked` with
@@ -115,7 +115,7 @@ fill), tests are written first and must fail before the implementation task.
   - Add `/eslint.config.mjs` re-exporting `@markme/config/eslint`, and a root `lint` for root files
     via the turbo root task `//#lint` (`eslint scripts eslint.config.mjs`) in `/turbo.json`.
   - Add `@markme/config` as a root devDependency (`workspace:*`).
-- [ ] T006 Add the shared Prettier config:
+- [X] T006 Add the shared Prettier config:
   - `packages/config/prettier/index.js`: `printWidth: 100`, `singleQuote: false`,
     `trailingComma: "all"`.
   - `/.prettierrc.mjs` re-exports it.
@@ -143,7 +143,7 @@ the local database harness (used by US1 and the US2 `db` check).
   - `packages/domain/src/index.test.ts` asserts that value (FR-013).
   - Proof: `pnpm test` runs 1 passing test.
 - [ ] T008 Write the failing tests for the env helper in
-  `packages/domain/src/env/parse-env.test.ts`, per contracts/env-helper.md:
+      `packages/domain/src/env/parse-env.test.ts`, per contracts/env-helper.md:
   - Valid input returns typed values (with default `PORT` applied and coerced to a number).
   - A missing required key gives `kind: "missing"`; `""` and `"   "` also count as missing.
   - A wrong format gives `kind: "invalid"` with the schema `.describe()` text as `expected`.
@@ -155,7 +155,7 @@ the local database harness (used by US1 and the US2 `db` check).
   - Keys not in the schema are ignored.
   - Run them and confirm they fail.
 - [ ] T009 Implement `parseEnv` and `EnvError` in `packages/domain/src/env/parse-env.ts`, matching
-  the signature in contracts/env-helper.md:
+      the signature in contracts/env-helper.md:
   - Use `schema.safeParse` and map `error.issues` per key.
   - Build the message **only** from the key, the kind and the field description. Never use the
     input or zod's issue text.
@@ -163,7 +163,7 @@ the local database harness (used by US1 and the US2 `db` check).
   - Re-export both from `packages/domain/src/index.ts`.
   - Proof: the T008 tests pass.
 - [ ] T010 [P] Create `packages/database` (`@markme/database`, private; can run alongside
-  T008–T009):
+      T008–T009):
   - Run `pnpm exec supabase init --workdir packages/database`, then set `project_id = "markme"`
     in `packages/database/supabase/config.toml`.
   - Add `packages/database/supabase/migrations/.gitkeep` and an empty
@@ -199,7 +199,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
     (contracts/preview-api.openapi.yaml).
   - `GET /anything-else` returns 404 (FR-008).
 - [ ] T012 [P] [US1] Write `scripts/dev-env.test.mjs` (Vitest) for the pure functions planned in
-  `scripts/dev-env.mjs`:
+      `scripts/dev-env.mjs`:
   - `parseStatusEnv(text)` returns **only** `{ API_URL, ANON_KEY }`, even when the input contains
     `SERVICE_ROLE_KEY`, `SECRET_KEY`, `JWT_SECRET` and `S3_PROTOCOL_ACCESS_KEY_SECRET` lines.
   - `fillExample(exampleText, values)` replaces only the keys mapped in contracts/app-config.md
@@ -252,7 +252,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
     - `WXT_PREVIEW_API_URL`: `z.url({ protocol: /^https?$/ })`.
     - All are required. **No other key** (FR-022).
     - Export the schema as `extensionEnvSchema`, plus `env = parseEnv(extensionEnvSchema,
-      import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" })`.
+import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" })`.
   - `apps/extension/wxt.config.ts`:
     - `modules: ["@wxt-dev/module-react"]`, `webExt: { disabled: true }`, and
       `manifest: { name: "MarkMe" }` with **no** `permissions` or `host_permissions` (R16).
@@ -277,8 +277,8 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
       `WXT_PREVIEW_API_URL ← http://127.0.0.1:8787`.
   - Proof: the T012 tests pass via root `pnpm test`.
 - [ ] T016 [US1] Implement `scripts/dev.mjs` (plain Node ESM, no dependencies) and add root script
-  `"dev": "node scripts/dev.mjs"` to `/package.json`. Follow the sequence and messages in
-  contracts/root-commands.md (R17):
+      `"dev": "node scripts/dev.mjs"` to `/package.json`. Follow the sequence and messages in
+      contracts/root-commands.md (R17):
   1. Preflight: Node major 24; `docker info` succeeds. On failure print the exact one-line message
      and exit 1, with no stack trace.
   2. Run `supabase status -o env --workdir packages/database` (captured). If it fails, run
@@ -288,7 +288,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
      created/found lines.
   4. Print the address summary.
   5. Spawn `pnpm turbo run dev --filter=@markme/preview-api --filter=@markme/extension
-     --ui=stream`. Forward SIGINT/SIGTERM and exit with the child's code. Never stop the database.
+--ui=stream`. Forward SIGINT/SIGTERM and exit with the child's code. Never stop the database.
 - [ ] T017 [US1] Write `/README.md` (FR-010):
   - What MarkMe is, in one line.
   - Prerequisites table copied from quickstart.md, including `fnm`/`nvm` for Node 24 and
@@ -302,7 +302,7 @@ http://127.0.0.1:8787/healthz` returns `{"ok":true}`, the database accepts conne
   - The root command table from contracts/root-commands.md.
   - No real or demo keys anywhere in the README.
 - [ ] T018 [US1] Run quickstart.md V1 and V2 on a fresh clone of the branch (`git clone` into a
-  temp dir):
+      temp dir):
   - Record first-run and second-run times (SC-001: < 15 min / < 2 min).
   - Check every edge-case row in V2.
   - Fix any README step that did not work verbatim, in `/README.md`.
@@ -333,8 +333,8 @@ be written in parallel with Phase 3.
   - It must pass on the current history and fail on a temporary commit that adds
     `AKIA` + 16 uppercase alphanumerics in a new file. Drop that commit afterwards.
 - [ ] T020 [US2] Create `/.github/workflows/ci.yml` with the triggers, `permissions`,
-  `concurrency` and the three Turbo jobs `lint`, `typecheck` and `test`, exactly per
-  contracts/ci-checks.md:
+      `concurrency` and the three Turbo jobs `lint`, `typecheck` and `test`, exactly per
+      contracts/ci-checks.md:
   - Steps: `actions/checkout` → `pnpm/action-setup` (version from `packageManager`) →
     `actions/setup-node` (`node-version-file: .nvmrc`, `cache: pnpm`) →
     `pnpm install --frozen-lockfile` → `actions/cache` for `.turbo/cache` (key
@@ -346,7 +346,7 @@ be written in parallel with Phase 3.
 - [ ] T021 [US2] Add the `db` job to `/.github/workflows/ci.yml`:
   - The same setup, without the Turbo cache.
   - `pnpm exec supabase start --workdir packages/database -x
-    studio,imgproxy,edge-runtime,logflare,vector,supavisor`
+studio,imgproxy,edge-runtime,logflare,vector,supavisor`
   - `pnpm db:test`
   - `pnpm db:types`
   - `git diff --exit-code packages/database/src/types.gen.ts`
@@ -356,7 +356,7 @@ be written in parallel with Phase 3.
     `github.com/gitleaks/gitleaks/releases/download/v8.30.1/`, then verify with
     `sha256sum --check --ignore-missing`.
   - Run `gitleaks git --config .gitleaks.toml --log-opts="$BASE..$HEAD" --redact --verbose
-    --exit-code 1`, with `BASE`/`HEAD` from `github.event.pull_request.base.sha`/`head.sha` on PRs,
+--exit-code 1`, with `BASE`/`HEAD` from `github.event.pull_request.base.sha`/`head.sha` on PRs,
     and `github.event.before`/`github.sha` on push.
   - On push, if `before` is all zeros, scan only `github.sha`.
 - [ ] T023 [US2] Push the branch and open a PR into `main` titled `chore(ci): M0 checks`:
@@ -365,9 +365,9 @@ be written in parallel with Phase 3.
     (US-2 #6).
   - Note the results in the PR description.
 - [ ] T024 [US2] The owner makes the repository public if it is not already. Then apply the
-  `ci-gate` ruleset with the `gh api` command in quickstart.md V5 step 2, and verify it with
-  `gh api repos/{owner}/{repo}/rulesets` (FR-012). Record the ruleset id in
-  `specs/001-m0-monorepo-foundation/quickstart.md` under V5.
+      `ci-gate` ruleset with the `gh api` command in quickstart.md V5 step 2, and verify it with
+      `gh api repos/{owner}/{repo}/rulesets` (FR-012). Record the ruleset id in
+      `specs/001-m0-monorepo-foundation/quickstart.md` under V5.
 - [ ] T025 [US2] Run the fault proofs from contracts/ci-checks.md on throwaway branches:
   - Five PRs into `001-m0-monorepo-foundation` (lint, type error, failing unit test, failing pgTAP
     test, and a fake secret committed and then removed in a later commit).
@@ -400,14 +400,14 @@ extension build) with one message naming every bad key, with no values (SC-005, 
   - The message contains `apps/preview-api/.env.example`.
   - Invalid values never appear in the message.
 - [ ] T027 [P] [US3] Write `apps/extension/src/lib/env.test.ts` against `extensionEnvSchema` via
-  `parseEnv`:
+      `parseEnv`:
   - Each of `WXT_SUPABASE_URL`, `WXT_SUPABASE_ANON_KEY` and `WXT_PREVIEW_API_URL` is tested
     missing and invalid. The anon key's invalid case is `replace-with-local-anon-key`, which has
     fewer than 20 characters.
   - All three bad at once → one error with three issues.
   - **Key-set lock**:
     `expect(Object.keys(extensionEnvSchema.shape).sort()).toEqual(["WXT_PREVIEW_API_URL",
-    "WXT_SUPABASE_ANON_KEY", "WXT_SUPABASE_URL"])` (FR-022).
+"WXT_SUPABASE_ANON_KEY", "WXT_SUPABASE_URL"])` (FR-022).
   - No key name matches `/SERVICE|SECRET|JWT/`.
 - [ ] T028 [US3] Run quickstart.md V3 by hand:
   - The preview API with `SUPABASE_URL` removed and `PORT=abc` exits 1, listing both.
@@ -423,12 +423,12 @@ extension build) with one message naming every bad key, with no values (SC-005, 
 ## Phase 6: Polish and cross-cutting concerns
 
 - [ ] T029 [P] Update `/CLAUDE.md` "Current state" with the real commands (from
-  contracts/root-commands.md), Node 24 / pnpm 12, and the note that `.env` files are created by
-  `pnpm dev`. Remove the "pre-code" wording. `AGENTS.md` only includes `@CLAUDE.md`, so it needs no
-  change.
+      contracts/root-commands.md), Node 24 / pnpm 12, and the note that `.env` files are created by
+      `pnpm dev`. Remove the "pre-code" wording. `AGENTS.md` only includes `@CLAUDE.md`, so it needs no
+      change.
 - [ ] T030 Run the full exit verification (quickstart.md V4) on a fresh clone:
   - `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm db:start &&
-    pnpm db:test`, then `pnpm db:types` with no diff, then `pnpm build`.
+pnpm db:test`, then `pnpm db:types` with no diff, then `pnpm build`.
   - Confirm `git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'` prints nothing
     (SC-006, FR-021).
   - Then open the milestone PR `001-m0-monorepo-foundation` → `main`.
