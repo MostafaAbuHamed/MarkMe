@@ -9,9 +9,9 @@
   "scripts": {
     "build": "turbo run build",
     "lint": "turbo run lint lint:root",
-    "lint:root": "eslint eslint.config.mjs",
+    "lint:root": "eslint eslint.config.mjs scripts",
     "typecheck": "turbo run typecheck",
-    "test": "turbo run test",
+    "test": "turbo run test && vitest run --dir scripts",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "db:start": "supabase start --workdir packages/database -x imgproxy,edge-runtime,logflare,vector,supavisor",

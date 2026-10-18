@@ -270,7 +270,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
     - `WXT_PREVIEW_API_URL=http://127.0.0.1:8787`
   - Proof: with a filled `.env`, `pnpm --filter @markme/extension build` produces
     `apps/extension/.output/chrome-mv3`.
-- [ ] T015 [US1] Implement `scripts/dev-env.mjs`:
+- [x] T015 [US1] Implement `scripts/dev-env.mjs`:
   - Export `parseStatusEnv`, `fillExample`, `ensureEnvFile` (write with `{ flag: "wx" }`; treat
     `EEXIST` as `"found"`) and the per-app fill map:
     - preview-api: `SUPABASE_URL ← API_URL`.
