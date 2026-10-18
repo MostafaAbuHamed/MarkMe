@@ -277,7 +277,7 @@ import.meta.env, { app: "extension", exampleFile: "apps/extension/.env.example" 
     - extension: `WXT_SUPABASE_URL ← API_URL`, `WXT_SUPABASE_ANON_KEY ← ANON_KEY`,
       `WXT_PREVIEW_API_URL ← http://127.0.0.1:8787`.
   - Proof: the T012 tests pass via root `pnpm test`.
-- [ ] T016 [US1] Implement `scripts/dev.mjs` (plain Node ESM, no dependencies) and add root script
+- [x] T016 [US1] Implement `scripts/dev.mjs` (plain Node ESM, no dependencies) and add root script
       `"dev": "node scripts/dev.mjs"` to `/package.json`. Follow the sequence and messages in
       contracts/root-commands.md (R17):
   1. Preflight: Node major 24; `docker info` succeeds. On failure print the exact one-line message
