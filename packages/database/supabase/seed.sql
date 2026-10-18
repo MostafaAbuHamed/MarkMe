@@ -1,0 +1,1 @@
+-- Seed data for local development. Applied by pnpm db:reset.

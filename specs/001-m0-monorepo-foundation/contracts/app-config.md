@@ -18,17 +18,17 @@ test (SC-005).
 
 ## `apps/extension` (`.env`, loaded by WXT/Vite; validated in `wxt.config.ts`)
 
-| Key                     | Required | Format (zod)                      | Description shown on error                                   | Secret                | `.env.example` value          | Filled by `pnpm dev` from         |
-| ----------------------- | -------- | --------------------------------- | ------------------------------------------------------------ | --------------------- | ----------------------------- | --------------------------------- |
-| `WXT_SUPABASE_URL`      | yes      | `z.url({ protocol: /^https?$/ })` | "an http(s) URL, e.g. http://127.0.0.1:54321"                | no                    | `http://127.0.0.1:54321`      | `API_URL`                         |
-| `WXT_SUPABASE_ANON_KEY` | yes      | `z.string().min(20)`              | "the public anon key printed by `pnpm exec supabase status`" | no (public by design) | `replace-with-local-anon-key` | `ANON_KEY`                        |
-| `WXT_PREVIEW_API_URL`   | yes      | `z.url({ protocol: /^https?$/ })` | "an http(s) URL, e.g. http://127.0.0.1:8787"                 | no                    | `http://127.0.0.1:8787`       | `http://127.0.0.1:${PORT}` (8787) |
+| Key                     | Required | Format (zod)                                             | Description shown on error                                   | Secret                | `.env.example` value          | Filled by `pnpm dev` from         |
+| ----------------------- | -------- | -------------------------------------------------------- | ------------------------------------------------------------ | --------------------- | ----------------------------- | --------------------------------- |
+| `WXT_SUPABASE_URL`      | yes      | `z.url({ protocol: /^https?$/ })`                        | "an http(s) URL, e.g. http://127.0.0.1:54321"                | no                    | `http://127.0.0.1:54321`      | `API_URL`                         |
+| `WXT_SUPABASE_ANON_KEY` | yes      | `z.string().min(20)` + refine rejecting `replace-with-…` | "the public anon key printed by `pnpm exec supabase status`" | no (public by design) | `replace-with-local-anon-key` | `ANON_KEY`                        |
+| `WXT_PREVIEW_API_URL`   | yes      | `z.url({ protocol: /^https?$/ })`                        | "an http(s) URL, e.g. http://127.0.0.1:8787"                 | no                    | `http://127.0.0.1:8787`       | `http://127.0.0.1:${PORT}` (8787) |
 
 - **Forbidden (FR-022)**: no key in the extension schema may name or accept a privileged key. A unit
   test asserts the schema's key set equals exactly the three keys above. Adding a key needs a
   deliberate test change, which a reviewer sees.
-- The placeholder `replace-with-local-anon-key` has fewer than 20 characters, so an unfilled example
-  copied by hand fails validation with a clear message instead of reaching runtime.
+- The schema rejects any `replace-with-…` value, so a hand-copied unfilled example fails
+  validation.
 
 ## Rules for `scripts/dev.mjs` (FR-007a)
 

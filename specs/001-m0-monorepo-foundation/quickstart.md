@@ -112,3 +112,42 @@ pnpm build                         # .output/chrome-mv3 and apps/preview-api/dis
 5. Re-run CI on an unchanged PR. The `lint`/`typecheck`/`test` logs show Turbo `cache hit`
    (US-2 #6).
 6. Once M1 adds a `.test.sql`, it runs in `db` with no workflow change (SC-007).
+
+## Validation log
+
+Recorded 2026-10-18. Fresh clone of `m0/t018-validate-us1` (`6150ffcd`) into a temp directory.
+Setup followed the README: `nvm use`, `corepack enable`, `pnpm install`, `pnpm dev`. Before the
+first `pnpm dev`, `pnpm db:stop` stopped the already-running local stack so that start was not a
+reuse. No README step failed, so `README.md` was not changed.
+
+Measured times (SC-001: first run under 15 min, later runs under 2 min):
+
+| Step                              | Time   |
+| --------------------------------- | ------ |
+| `pnpm install`                    | 5.61 s |
+| First `pnpm dev` until `/healthz` | 34.1 s |
+| Later `pnpm dev` until `/healthz` | 3.4 s  |
+
+| Check                         | Result | Evidence                                                                                                                                                                 |
+| ----------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| V1 US-1 #1 addresses          | pass   | `[dev]` summary printed Supabase API `:54321`, Studio `:54323`, Mailpit `:54324`, Preview API `:8787/healthz`, and the unpacked extension path.                          |
+| V1 US-1 #2 env created        | pass   | `created` both `.env` files from the examples; URLs match stack `API_URL`; anon key matches status; no service-role key written.                                         |
+| V1 US-1 #3 file untouched     | pass   | Rerun printed `found … (left unchanged)` with identical checksums. After editing `WXT_PREVIEW_API_URL`, the next run left that file byte-identical.                      |
+| V1 US-1 #4 `/healthz`         | pass   | `curl` returned `{"ok":true}`.                                                                                                                                           |
+| V1 US-1 #5 unpacked extension | manual | `apps/extension/.output/chrome-mv3-dev/manifest.json` is Manifest V3 with `action.default_popup` `popup.html`. Needs a manual browser check by the owner.                |
+| V1 US-1 #6 reuse running DB   | pass   | Later `pnpm dev` printed `supabase: already running (reused)`.                                                                                                           |
+| V1 US-1 #7 Ctrl-C then stop   | pass   | SIGINT (exit 130) took `/healthz` down and stopped the extension build; port 54321 stayed up (`supabase status` exit 0). `pnpm db:stop` then stopped it (status exit 1). |
+| V2 Docker missing             | pass   | `scripts/dev.mjs` on a PATH with node and no `docker`: exit 1, the one-line Docker message, no stack trace. The Docker daemon was not stopped.                           |
+| V2 wrong Node, `pnpm dev`     | pass   | Node 26.11.1: exit 1, `[dev] Node 24 is required (found 26.11.1)…`, no stack trace.                                                                                      |
+| V2 wrong Node, `pnpm install` | pass   | Exit 1, `ERR_PNPM_UNSUPPORTED_ENGINE`, wanted `{"node":">=24 <25"}`, current `26.11.1`.                                                                                  |
+| V2 port 8787 busy             | pass   | `python3 -m http.server 8787`, then `pnpm dev`, printed `@markme/preview-api:dev: preview-api: port 8787 is already in use`.                                             |
+| V2 `git status` after dev     | pass   | `git status --short` listed no `.env` files. Both are ignored by `.gitignore`.                                                                                           |
+
+Caveats:
+
+- Docker images were already cached. Image download time was not re-measured. The 34.1 s first
+  `pnpm dev` is a start after `pnpm db:stop` with cached images, not a cold image pull.
+- US-1 #5 (load unpacked, no errors, placeholder popup) was not done in a browser. The owner still
+  needs to load `apps/extension/.output/chrome-mv3-dev`.
+- In this non-interactive shell, `nvm use` needed `source ~/.nvm/nvm.sh` first. That is shell
+  setup, not a README gap. An interactive shell that already loads nvm follows the README as written.
