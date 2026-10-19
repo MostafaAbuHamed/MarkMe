@@ -6,3 +6,7 @@ useDefault = true
 [[allowlists]]
 description = "placeholder values in .env.example"
 regexes = ['''replace-with-[a-z0-9-]+''']
+
+[[allowlists]]
+description = "sentinel values in env tests that check invalid input is never echoed"
+regexes = ['''SENTINEL-[A-Za-z0-9-]+''']
