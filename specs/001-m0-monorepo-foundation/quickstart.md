@@ -151,3 +151,66 @@ Caveats:
   needs to load `apps/extension/.output/chrome-mv3-dev`.
 - In this non-interactive shell, `nvm use` needed `source ~/.nvm/nvm.sh` first. That is shell
   setup, not a README gap. An interactive shell that already loads nvm follows the README as written.
+
+### V5 CI checks (T023, 2026-10-18)
+
+PR [#22](https://github.com/MostafaAbuHamed/MarkMe/pull/22) (`m0/t022-ci-secrets`, the first branch with all
+five jobs), workflow run `39110291727`.
+
+| Check                          | Result | Evidence                                                                               |
+| ------------------------------ | ------ | -------------------------------------------------------------------------------------- |
+| Five checks appear on the PR   | pass   | `lint` 28 s, `typecheck` 18 s, `test` 17 s, `db` 2 m 1 s, `secrets` 9 s, all `success` |
+| Clean PR under 10 min (SC-004) | pass   | Whole run 2 m 3 s (08:08:20 → 08:10:23 UTC); jobs run in parallel                      |
+| No stored secrets (FR-016)     | pass   | `ci.yml` has no `secrets.*` reference; permissions are `contents: read`                |
+| Results reused (US-2 #6)       | pass   | Re-run (attempt 2): Turbo `5/5`, `4/4`, `2/2` cached, `FULL TURBO` in all three jobs   |
+
+### Merge blocking (T024, 2026-10-18)
+
+Ruleset `ci-gate` applied with the command in V5 step 2. Ruleset id **25337047**, enforcement
+`active`, no bypass actors. `gh api repos/MostafaAbuHamed/MarkMe/rules/branches/<branch>` returns
+`deletion, non_fast_forward, pull_request, required_status_checks` for both `main` and
+`001-m0-monorepo-foundation`. It returns nothing for the per-task branches (`m0/t0NN-*`), which are
+not milestone branches.
+
+### Deliberate-fault proofs (T025, 2026-10-18)
+
+Six throwaway draft PRs into `001-m0-monorepo-foundation` (protected by `ci-gate`), each holding the
+whole M0 stack plus one change. All were closed unmerged and their branches deleted.
+
+| PR  | Fault                                                                                | Failing check | Other checks | Merge state | Evidence                                                                                                 |
+| --- | ------------------------------------------------------------------------------------ | ------------- | ------------ | ----------- | -------------------------------------------------------------------------------------------------------- |
+| #25 | un-awaited promise in `packages/domain/src/fault.ts`                                 | `lint`        | 4 pass       | BLOCKED     | `fault.ts 2:3 @typescript-eslint/no-floating-promises` (and `1:8 require-await`)                         |
+| #26 | `const fault: number = "a"`                                                          | `typecheck`   | 4 pass       | BLOCKED     | tsc type error in `fault.ts`                                                                             |
+| #27 | `expect(1).toBe(2)` in a domain test                                                 | `test`        | 4 pass       | BLOCKED     | Vitest failure                                                                                           |
+| #28 | `select ok(false, …)` in `supabase/tests/001-fault.test.sql`                         | `db`          | 4 pass       | BLOCKED     | pgTAP failure                                                                                            |
+| #29 | generic high-entropy API key added in one commit, removed in the next                | `secrets`     | 4 pass       | BLOCKED     | `generic-api-key`, `scripts/fault-config.txt:1`, commit `0ba4ab07`; the final diff no longer has the key |
+| #30 | placeholder-only `.env.example` change (`replace-with-your-local-anon-key`), US-2 #5 | none          | 5 pass       | CLEAN       | `secrets` passes                                                                                         |
+
+SC-003: five of five faults caught. FR-012: merging is blocked while a required check fails.
+
+### V3 configuration validation (T028, 2026-10-18)
+
+| Check                                                                                                | Result | Evidence                                                                                                                                         |
+| ---------------------------------------------------------------------------------------------------- | ------ | ------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `pnpm test` covers every key of both apps (SC-005)                                                   | pass   | preview-api 15 (12 env), extension 12 (env, key-set lock), domain 13, scripts 11                                                                 |
+| Preview API with `PORT=abc` and no `SUPABASE_URL` (US-3 #1–#3)                                       | pass   | exit 1, no stack trace; lists `PORT: invalid, expected a port number from 1 to 65535` and `SUPABASE_URL: missing`, plus the copy hint            |
+| Extension build from an unfilled example copy with `WXT_PREVIEW_API_URL=not-a-url` (US-3 #2, #3, #6) | pass   | exit 1; lists `WXT_PREVIEW_API_URL` and `WXT_SUPABASE_ANON_KEY` (placeholder) as invalid with expected formats; no `.output/chrome-mv3` produced |
+| No value printed (US-3 #4, FR-019)                                                                   | pass   | neither `abc`, `not-a-url` nor the placeholder appears in either message                                                                         |
+| App starts with the config `pnpm dev` created (US-3 #5)                                              | pass   | see V1: `/healthz` answered and the extension dev build was produced from the generated `.env` files                                             |
+
+No gaps found, so `src/` was not changed.
+
+### V4 exit verification (T030, 2026-10-18)
+
+Fresh clone of `m0/t030-exit-verification` (the top of the M0 stack) into a temp directory.
+
+| Step                                                           | Result                                                                |
+| -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `pnpm install --frozen-lockfile`                               | pass                                                                  |
+| `pnpm lint`, `pnpm format:check`, `pnpm typecheck`             | pass                                                                  |
+| `pnpm test`                                                    | pass: extension 12, domain 13, preview-api 15, scripts 11             |
+| `pnpm db:start && pnpm db:test`                                | pass (`Result: PASS`)                                                 |
+| `pnpm db:types` + `git diff --exit-code …/types.gen.ts`        | no drift                                                              |
+| `pnpm dev` (creates both `.env`), then `pnpm build`            | 2/2 tasks; `.output/chrome-mv3` and `apps/preview-api/dist/` produced |
+| tracked `.env` files (`git ls-files` excluding `.env.example`) | none (SC-006, FR-021)                                                 |
+| working tree after all steps                                   | clean (`git status --short` empty)                                    |

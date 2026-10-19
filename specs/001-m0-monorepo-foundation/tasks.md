@@ -344,14 +344,14 @@ be written in parallel with Phase 3.
   - `lint` also runs `pnpm format:check`.
   - Pin every action by full commit SHA, with the tag in a comment.
   - No `secrets.*` reference anywhere (FR-016).
-- [ ] T021 [US2] Add the `db` job to `/.github/workflows/ci.yml`:
+- [x] T021 [US2] Add the `db` job to `/.github/workflows/ci.yml`:
   - The same setup, without the Turbo cache.
   - `pnpm exec supabase start --workdir packages/database -x
 studio,imgproxy,edge-runtime,logflare,vector,supavisor`
   - `pnpm db:test`
   - `pnpm db:types`
   - `git diff --exit-code packages/database/src/types.gen.ts`
-- [ ] T022 [US2] Add the `secrets` job to `/.github/workflows/ci.yml`:
+- [x] T022 [US2] Add the `secrets` job to `/.github/workflows/ci.yml`:
   - `actions/checkout` with `fetch-depth: 0`.
   - Download the `gitleaks_8.30.1_linux_x64.tar.gz` asset and the release checksums file from
     `github.com/gitleaks/gitleaks/releases/download/v8.30.1/`, then verify with
@@ -360,16 +360,16 @@ studio,imgproxy,edge-runtime,logflare,vector,supavisor`
 --exit-code 1`, with `BASE`/`HEAD` from `github.event.pull_request.base.sha`/`head.sha` on PRs,
     and `github.event.before`/`github.sha` on push.
   - On push, if `before` is all zeros, scan only `github.sha`.
-- [ ] T023 [US2] Push the branch and open a PR into `main` titled `chore(ci): M0 checks`:
+- [x] T023 [US2] Push the branch and open a PR into `main` titled `chore(ci): M0 checks`:
   - Confirm the five checks appear and pass, and record the wall time (SC-002, SC-004 < 10 min).
   - Re-run the jobs and confirm `cache hit` in the Turbo output of `lint`/`typecheck`/`test`
     (US-2 #6).
   - Note the results in the PR description.
-- [ ] T024 [US2] The owner makes the repository public if it is not already. Then apply the
+- [x] T024 [US2] The owner makes the repository public if it is not already. Then apply the
       `ci-gate` ruleset with the `gh api` command in quickstart.md V5 step 2, and verify it with
       `gh api repos/{owner}/{repo}/rulesets` (FR-012). Record the ruleset id in
       `specs/001-m0-monorepo-foundation/quickstart.md` under V5.
-- [ ] T025 [US2] Run the fault proofs from contracts/ci-checks.md on throwaway branches:
+- [x] T025 [US2] Run the fault proofs from contracts/ci-checks.md on throwaway branches:
   - Five PRs into `001-m0-monorepo-foundation` (lint, type error, failing unit test, failing pgTAP
     test, and a fake secret committed and then removed in a later commit).
   - One PR changing only an `.env.example` placeholder.
@@ -391,7 +391,7 @@ extension build) with one message naming every bad key, with no values (SC-005, 
 
 **Depends on**: T009 (helper), T013 and T014 (schemas exist). It does not depend on US2.
 
-- [ ] T026 [P] [US3] Write `apps/preview-api/test/env.test.ts` against `loadEnv`:
+- [x] T026 [P] [US3] Write `apps/preview-api/test/env.test.ts` against `loadEnv`:
   - `SUPABASE_URL` missing → issue `missing`.
   - `SUPABASE_URL=not-a-url` and `ftp://x` → `invalid`, expected
     "an http(s) URL, e.g. http://127.0.0.1:54321".
@@ -400,7 +400,7 @@ extension build) with one message naming every bad key, with no values (SC-005, 
   - Both bad at once → one error listing both.
   - The message contains `apps/preview-api/.env.example`.
   - Invalid values never appear in the message.
-- [ ] T027 [P] [US3] Write `apps/extension/src/lib/env.test.ts` against `extensionEnvSchema` via
+- [x] T027 [P] [US3] Write `apps/extension/src/lib/env.test.ts` against `extensionEnvSchema` via
       `parseEnv`:
   - Each of `WXT_SUPABASE_URL`, `WXT_SUPABASE_ANON_KEY` and `WXT_PREVIEW_API_URL` is tested
     missing and invalid. The anon key's invalid case is `replace-with-local-anon-key`; the
@@ -410,7 +410,7 @@ extension build) with one message naming every bad key, with no values (SC-005, 
     `expect(Object.keys(extensionEnvSchema.shape).sort()).toEqual(["WXT_PREVIEW_API_URL",
 "WXT_SUPABASE_ANON_KEY", "WXT_SUPABASE_URL"])` (FR-022).
   - No key name matches `/SERVICE|SECRET|JWT/`.
-- [ ] T028 [US3] Run quickstart.md V3 by hand:
+- [x] T028 [US3] Run quickstart.md V3 by hand:
   - The preview API with `SUPABASE_URL` removed and `PORT=abc` exits 1, listing both.
   - The extension build with `WXT_PREVIEW_API_URL=not-a-url` fails and produces no
     `apps/extension/.output/chrome-mv3`.
@@ -423,11 +423,11 @@ extension build) with one message naming every bad key, with no values (SC-005, 
 
 ## Phase 6: Polish and cross-cutting concerns
 
-- [ ] T029 [P] Update `/CLAUDE.md` "Current state" with the real commands (from
+- [x] T029 [P] Update `/CLAUDE.md` "Current state" with the real commands (from
       contracts/root-commands.md), Node 24 / pnpm 12, and the note that `.env` files are created by
       `pnpm dev`. Remove the "pre-code" wording. `AGENTS.md` only includes `@CLAUDE.md`, so it needs no
       change.
-- [ ] T030 Run the full exit verification (quickstart.md V4) on a fresh clone:
+- [x] T030 Run the full exit verification (quickstart.md V4) on a fresh clone:
   - `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm db:start &&
 pnpm db:test`, then `pnpm db:types` with no diff, then `pnpm build`.
   - Confirm `git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'` prints nothing
