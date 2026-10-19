@@ -427,7 +427,7 @@ extension build) with one message naming every bad key, with no values (SC-005, 
       contracts/root-commands.md), Node 24 / pnpm 12, and the note that `.env` files are created by
       `pnpm dev`. Remove the "pre-code" wording. `AGENTS.md` only includes `@CLAUDE.md`, so it needs no
       change.
-- [ ] T030 Run the full exit verification (quickstart.md V4) on a fresh clone:
+- [x] T030 Run the full exit verification (quickstart.md V4) on a fresh clone:
   - `pnpm lint && pnpm format:check && pnpm typecheck && pnpm test && pnpm db:start &&
 pnpm db:test`, then `pnpm db:types` with no diff, then `pnpm build`.
   - Confirm `git ls-files | grep -E '(^|/)\.env($|\.)' | grep -v '\.env\.example$'` prints nothing

@@ -199,3 +199,18 @@ SC-003: five of five faults caught. FR-012: merging is blocked while a required 
 | App starts with the config `pnpm dev` created (US-3 #5)                                              | pass   | see V1: `/healthz` answered and the extension dev build was produced from the generated `.env` files                                             |
 
 No gaps found, so `src/` was not changed.
+
+### V4 exit verification (T030, 2026-10-18)
+
+Fresh clone of `m0/t030-exit-verification` (the top of the M0 stack) into a temp directory.
+
+| Step                                                           | Result                                                                |
+| -------------------------------------------------------------- | --------------------------------------------------------------------- |
+| `pnpm install --frozen-lockfile`                               | pass                                                                  |
+| `pnpm lint`, `pnpm format:check`, `pnpm typecheck`             | pass                                                                  |
+| `pnpm test`                                                    | pass: extension 12, domain 13, preview-api 15, scripts 11             |
+| `pnpm db:start && pnpm db:test`                                | pass (`Result: PASS`)                                                 |
+| `pnpm db:types` + `git diff --exit-code …/types.gen.ts`        | no drift                                                              |
+| `pnpm dev` (creates both `.env`), then `pnpm build`            | 2/2 tasks; `.output/chrome-mv3` and `apps/preview-api/dist/` produced |
+| tracked `.env` files (`git ls-files` excluding `.env.example`) | none (SC-006, FR-021)                                                 |
+| working tree after all steps                                   | clean (`git status --short` empty)                                    |
