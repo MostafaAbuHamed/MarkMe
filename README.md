@@ -55,7 +55,27 @@ On later runs the database line reads `supabase: already running (reused)` and t
 3. Choose **Load unpacked**.
 4. Select `apps/extension/.output/chrome-mv3-dev` (created once `pnpm dev` is running).
 
-Branded Chrome ignores `--load-extension`, so load that folder by hand.
+### Optional: let `pnpm dev` open the browser
+
+To have `pnpm dev` launch a browser with the dev build already loaded, create
+`apps/extension/web-ext.config.ts`. The file is gitignored because the browser path depends on your
+machine:
+
+```ts
+import { defineWebExtConfig } from "wxt";
+
+export default defineWebExtConfig({
+  disabled: false,
+  // Any Chromium-based browser; omit to use the Chrome that chrome-launcher finds.
+  binaries: { chrome: "/usr/bin/brave-browser" },
+  // Optional: lets local tools (e.g. a coding agent) attach over the DevTools protocol.
+  chromiumArgs: ["--remote-debugging-port=9222"],
+});
+```
+
+The browser opens with a fresh temporary profile, and the extension reloads as you edit. With the
+debugging port set, the popup is reachable at `chrome-extension://<id>/popup.html`; the id is in the
+extension service worker URL listed by `http://127.0.0.1:9222/json/list`.
 
 ## Stopping
 
