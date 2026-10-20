@@ -286,6 +286,14 @@ rule).
   - The dev server keeps WXT's default port (3000). `wxt` opens its own browser by default. Set
     `webExt.disabled = true` so the contributor loads `.output/chrome-mv3-dev` as unpacked (US-1 #5;
     branded Chrome ignores `--load-extension`, S0 tooling note).
+  - **Amendment (2026-10-20, PR #40)**: add `web-ext` **10.7.0** (exact pin) as a dev-only
+    dependency of `apps/extension`. It is WXT's optional peer and the only way `wxt` can launch a
+    browser. web-ext 10.x loads the extension through the CDP method `Extensions.loadUnpacked`, so
+    the branded-Chrome limit above no longer blocks the launch. The default stays
+    `webExt.disabled = true`; a contributor opts in with a gitignored
+    `apps/extension/web-ext.config.ts` (the browser path is machine-specific). Reason: a live,
+    auto-reloading dev browser, and an optional `--remote-debugging-port` so a local agent can
+    check popup UI itself. 10.7.0 rather than 10.8.0 because 10.8.0 was 5 days old.
 - **Rationale**: the approved stack. Adding no permissions follows the minimal-permissions rule.
 
 ## R17. Start command orchestration (FR-005–FR-007, edge cases)
