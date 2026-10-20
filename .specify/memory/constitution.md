@@ -1,4 +1,10 @@
 <!--
+Sync Impact Report (1.1.2, 2026-10-20)
+- Version change: 1.1.1 → 1.1.2 (PATCH, approved by Mostafa)
+- Security principle: "allowlisted `embed_html`" replaced by embeds stored as provider + validated
+  id, never HTML. Reason: decision A19 (M1 design review); PRD §6 changed in the same change.
+- Principles: unchanged in substance.
+
 Sync Impact Report (1.1.1, 2026-10-18)
 - Version change: 1.1.0 → 1.1.1 (PATCH, approved by Mostafa)
 - Technology Constraints, Auth: "users may use the app before confirming email" replaced by
@@ -45,7 +51,7 @@ and a spec disagree, this constitution wins until amended.
   private, loopback, link-local, CGNAT, multicast and metadata ranges blocked (IPv4 and IPv6);
   connect to the validated IP; re-validate every redirect; max 3 redirects, 5 s, 2 MB;
   content-type allowlist; no cookies; fixed User-Agent; per-user and per-IP rate limits; sanitized
-  output and allowlisted `embed_html`.
+  output; embeds only from allowlisted providers, stored as provider + validated id, never HTML.
 - SSRF tests are written before the fetcher.
 - Secrets live only in env files and the host's secret store. The service-role key never reaches
   a client bundle. No secrets in git.
@@ -138,4 +144,4 @@ and a spec disagree, this constitution wins until amended.
 - Reviews check compliance; unjustified complexity is rejected.
 - Runtime guidance for agents lives in `CLAUDE.md`, which must not contradict this document.
 
-**Version**: 1.1.1 | **Ratified**: 2026-10-17 | **Last Amended**: 2026-10-18
+**Version**: 1.1.2 | **Ratified**: 2026-10-17 | **Last Amended**: 2026-10-20
