@@ -17,15 +17,25 @@ Commands (repo root): `pnpm dev`, `pnpm lint`, `pnpm format:check` / `pnpm forma
 `pnpm test`, `pnpm build`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:test`,
 `pnpm db:types`, `pnpm db:new`. `pnpm dev` starts local Supabase (CLI + Docker), the preview API and
 the extension dev build; it must keep working after every merge. `pnpm build` and the extension dev
-build need `apps/extension/.env`, which `pnpm dev` creates from `.env.example` (never overwritten);
-unit tests and typecheck need no `.env`.
+build need `apps/extension/.env`; `pnpm dev` creates `.env` for both apps from `.env.example`, filled
+from `supabase status` (an existing `.env` is never overwritten); unit tests and typecheck need no
+`.env`. Local ports: preview API 8787, Supabase API 54321, Studio 54323, Mailpit 54324.
 
-CI: five required checks on every PR — lint, typecheck, test, db, secrets; ruleset `ci-gate` blocks
+CI: five required checks on every PR — lint (also runs `format:check`), typecheck, test, db, secrets; ruleset `ci-gate` blocks
 merges to `main` and `NNN-*` milestone branches unless all are green. After a migration run
 `pnpm db:types` and commit the result (CI fails on drift).
 
 Config: every app validates env via `parseEnv` from `@markme/domain`; the extension schema is locked
 to three public keys by a test.
+
+Dev browser (opt-in): `wxt.config.ts` keeps `webExt.disabled = true`; a gitignored
+`apps/extension/web-ext.config.ts` (see README) turns the launch on per machine. On Mostafa's machine
+it opens Brave (`/usr/bin/brave-browser`; no Google Chrome installed) with
+`--remote-debugging-port=9222`. To check UI yourself, run `pnpm dev` in `apps/extension`, read the
+extension id from the service-worker URL in `http://127.0.0.1:9222/json/list`, open
+`chrome-extension://<id>/popup.html` via `PUT /json/new?<url>`, and use CDP (`Page.captureScreenshot`,
+`Runtime.evaluate`, console events). The id changes per launch until the key is pinned (M4-T1). The
+DevTools MCP plugin launches its own Chrome, so it does not work here as configured.
 
 ## Source documents (read before non-trivial work)
 
@@ -40,6 +50,7 @@ to three public keys by a test.
 
 - Each milestone in `docs/PLAN.md` is one Spec Kit feature, run in order:
   `/speckit-specify` → `/speckit-clarify` → `/speckit-plan` → `/speckit-tasks` → `/speckit-implement`.
+  Artifacts land in `specs/NNN-<name>/` (e.g. `specs/001-m0-monorepo-foundation/`).
   Spec Kit skills live in `.claude/skills/speckit-*` (mirrored in `.cursor/skills/` and
   `.opencode/commands/`); scripts and templates in `.specify/`.
 - One branch per milestone; one commit and one PR per Spec Kit task, into the milestone branch.
