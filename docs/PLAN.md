@@ -65,9 +65,9 @@ M3 needs JWT verification, not the schema; if it helps, it can depend on M0 + M2
 - `user_id default auth.uid()`; unique `(user_id, normalized_url)`, case-insensitive unique folder/tag names.
 - Profile auto-created on sign-up (trigger).
 - `search_vector` over title, description, note, URL; tag names folded in (trigger or search function); GIN index.
-- Search RPC: text + folder + tags filters, relevance ranking, pagination.
+- Search RPC: text (word-prefix matching) + folder / no-folder + tags filters, relevance ranking, pagination.
 - Folder delete sets `folder_id = null`; tag delete cascades `item_tags`.
-- RLS on all tables; `item_tags` checks ownership of item and tag.
+- RLS on all tables; `item_tags` checks ownership of item and tag. Column-level insert/update allowlists; a saved URL is immutable.
 - Generated types exported from `packages/database`; CI fails if they drift from the migrations.
 - Supabase Cloud project created; migrations pushed to it (manual step or CI job, decided in the M1 plan).
 - **Tests (pgTAP):** two users, read/write/cross-user denial per table, uniqueness, FTS ranking.
@@ -89,7 +89,7 @@ M3 needs JWT verification, not the schema; if it helps, it can depend on M0 + M2
 - Full SSRF protections (PRD 7.3): scheme/port, DNS resolve + IP blocklist v4/v6, connect to validated IP, re-check each redirect, 3 redirects, 5 s, 2 MB, content-type allowlist, no cookies, fixed UA.
 - Per-user and per-IP rate limits; forced-refresh flag rate-limited.
 - Cache and rate limits are in memory for v1 (per instance, lost on scale-to-zero). The M3 plan records this choice and the Cloud Run max-instances setting.
-- `embed_html` only from allowlisted providers, sanitized.
+- Embeds only from allowlisted providers, returned as provider + validated id, never HTML.
 - Deployed to Cloud Run from CI (walking skeleton), with secrets in the host's secret store.
 - **Tests (written before the fetcher):** SSRF suite (private IPs, rebinding, internal redirects), limits, content types, parsing fixtures, oEmbed, rate limits.
 - **Exit:** all SSRF cases blocked in CI; image builds; runs locally via `pnpm dev`; deployed endpoint answers with a valid JWT and rejects SSRF cases.
@@ -185,6 +185,7 @@ Run the OAuth/oEmbed spike, and write the `/speckit-specify` input for **M0 Mono
 
 ## Changelog
 
+- v1.3 (2026-10-20): M1 and M3 bullets updated for the M1 design review (IMPLEMENTATION_PLAN §4 A13–A20).
 - v1.2 (2026-10-17): linked IMPLEMENTATION_PLAN.md (technical design, tasks, spike S0 steps).
 - v1.1 (2026-10-17): fixed M1 coverage; added common definition of done, secrets and DB-test CI to M0, early cloud deploys (M1, M3), pre-M4 spike, background-worker preview flow, pinned extension ID, earlier E2E and a11y checks, measurable perf exits, unpacked-only release, new risks.
 - v1.0 (2026-10-17): first draft.

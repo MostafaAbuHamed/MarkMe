@@ -88,13 +88,13 @@ packages/
 
 ## 6. Domain Model
 
-| Entity      | Key fields                                                                                                                                                                                                                                                                                             | Notes                                          |
-| ----------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ | ---------------------------------------------- |
-| `profiles`  | `id` (= auth user id), `display_name`, `created_at`                                                                                                                                                                                                                                                    | Created on sign-up.                            |
-| `items`     | `id`, `user_id`, `url`, `normalized_url`, `title`, `description`, `image_url`, `site_name`, `media_type` (article/video/image/post/link), `embed_html`, `favicon_url?`, `folder_id?`, `note?`, `preview_status` (pending/ok/failed), `preview_fetched_at`, `created_at`, `updated_at`, `search_vector` | Unique (`user_id`, `normalized_url`).          |
-| `folders`   | `id`, `user_id`, `name`, `created_at`                                                                                                                                                                                                                                                                  | Unique (`user_id`, lower(`name`)). Flat in v1. |
-| `tags`      | `id`, `user_id`, `name`                                                                                                                                                                                                                                                                                | Unique (`user_id`, lower(`name`)).             |
-| `item_tags` | `item_id`, `tag_id`                                                                                                                                                                                                                                                                                    | Many-to-many.                                  |
+| Entity      | Key fields                                                                                                                                                                                                                                                                                                                         | Notes                                          |
+| ----------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------- |
+| `profiles`  | `id` (= auth user id), `display_name`, `created_at`                                                                                                                                                                                                                                                                                | Created on sign-up.                            |
+| `items`     | `id`, `user_id`, `url`, `normalized_url`, `title`, `description`, `image_url`, `site_name`, `media_type` (article/video/image/post/link), `embed_provider?` (youtube), `embed_id?`, `favicon_url?`, `folder_id?`, `note?`, `preview_status` (pending/ok/failed), `preview_fetched_at`, `created_at`, `updated_at`, `search_vector` | Unique (`user_id`, `normalized_url`).          |
+| `folders`   | `id`, `user_id`, `name`, `created_at`                                                                                                                                                                                                                                                                                              | Unique (`user_id`, lower(`name`)). Flat in v1. |
+| `tags`      | `id`, `user_id`, `name`                                                                                                                                                                                                                                                                                                            | Unique (`user_id`, lower(`name`)).             |
+| `item_tags` | `item_id`, `tag_id`                                                                                                                                                                                                                                                                                                                | Many-to-many.                                  |
 
 **URL normalization (shared in `packages/domain`):** lowercase scheme and host, strip fragment, strip default ports, strip common tracking params (`utm_*`, `fbclid`, `gclid`), remove trailing slash on path. Used for duplicate detection.
 
@@ -166,7 +166,7 @@ packages/
 - Accept only `text/html` (and image types for direct image links).
 - Per-user and per-IP rate limits.
 - No cookies or credentials forwarded; fixed User-Agent.
-- Sanitize returned strings and `embed_html` (allowlisted providers only).
+- Sanitize returned strings. Embeds are returned as provider + validated id (allowlisted providers only), never as HTML.
 
 ### 7.4 Security
 
@@ -259,5 +259,6 @@ packages/
 
 ## Changelog
 
+- v1.2 (2026-10-20): `items.embed_html` replaced by `embed_provider` + `embed_id` (IMPLEMENTATION_PLAN §4 A19); the preview API returns embeds as provider + id.
 - v1.1 (2026-10-18): approved IMPLEMENTATION_PLAN §4 decisions A1 (`items.favicon_url`, filled by the preview API), A3 (multi-tag filter = all selected tags) and A7 option (a) (US-1: confirm email before first sign-in, per spike S0 Q3); US-1b notes the S0 Q4 linking behavior.
 - v1.0 (2026-10-17): approved.

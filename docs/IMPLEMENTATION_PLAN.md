@@ -373,6 +373,8 @@ CI is green, with one passing unit test and one passing pgTAP test.
    - `create extension if not exists pgtap with schema extensions;` (tests only; Supabase ships it).
    - `create type public.media_type as enum ('article','video','image','post','link');`
    - `create type public.preview_status as enum ('pending','ok','failed');`
+   - `create type public.embed_provider as enum ('youtube');` **(approved, A19)**. A new provider
+     is `alter type … add value` plus one branch in the `embed_id` check.
    - A shared `public.set_updated_at()` trigger function.
 
 2. `…_profiles.sql`
@@ -393,13 +395,22 @@ CI is green, with one passing unit test and one passing pgTAP test.
    - `items`:
      - `id uuid pk default gen_random_uuid()`
      - `user_id uuid not null default auth.uid() references auth.users on delete cascade`
-     - `url text not null check (url ~* '^https?://')`
-     - `normalized_url text not null`
-     - `title text`, `description text`, `image_url text`
-     - `favicon_url text` **(approved, A1)**
-     - `site_name text`
+     - `url text not null check (url ~* '^https?://' and char_length(url) <= 2048)`
+     - `normalized_url text not null check (normalized_url ~* '^https?://' and char_length(normalized_url) <= 2048)`.
+       The client computes it with the `packages/domain` normalizer; the database does not
+       re-normalize **(approved, A17)**.
+     - `title text check (char_length(title) <= 500)`
+     - `description text check (char_length(description) <= 2000)`
+     - `image_url text check (char_length(image_url) <= 2048)`
+     - `favicon_url text check (char_length(favicon_url) <= 2048)` **(approved, A1)**
+     - `site_name text check (char_length(site_name) <= 200)`
+     - The length caps are **(approved, A18)**. They are hard ceilings above the M2 `previewResponse`
+       caps; the preview API truncates to fit, so a long `og:description` never fails a save.
      - `media_type media_type not null default 'link'`
-     - `embed_html text`
+     - `embed_provider embed_provider`, `embed_id text` **(approved, A19; replaces `embed_html`)**:
+       `check ((embed_provider is null) = (embed_id is null))` and
+       `check (embed_provider is distinct from 'youtube' or embed_id ~ '^[A-Za-z0-9_-]{11}$')`.
+       No markup is stored; each surface builds its own embed from the provider and id.
      - `folder_id uuid`
      - `note text check (char_length(note) <= 1000)`
      - `preview_status preview_status not null default 'pending'`
@@ -431,8 +442,17 @@ CI is green, with one passing unit test and one passing pgTAP test.
        Checking both sides is defense in depth against a bad row from an admin path.
      - insert `with check` requires **both** the item and the tag to be owned.
      - No update policy (rows are immutable; delete + insert).
-   - Revoke update of `user_id` from `authenticated` on items/folders/tags (column privilege). This
-     stops ownership transfer even though `with check` already blocks it.
+   - **Column-level privileges (approved, A15, A16).** Revoke table-wide `insert`/`update` from
+     `authenticated` on items/folders/tags, then grant allowlists. A new column stays locked until
+     it is granted on purpose. Column defaults apply without the privilege; RLS stays as the second
+     layer.
+     - `items` insert: `url, normalized_url, title, description, image_url, favicon_url, site_name, media_type, embed_provider, embed_id, folder_id, note, preview_status, preview_fetched_at`.
+     - `items` update: the same list **without** `url` and `normalized_url`. A saved URL is
+       immutable (US-14 edits title, note, folder and tags only); changing it means delete and
+       save again.
+     - `folders`, `tags`: insert and update `name` only.
+     - Never granted: `id`, `user_id`, `created_at`, `updated_at`, `search_vector`. An insert
+       that names `user_id` fails with _permission denied_ before RLS is reached.
 
 6. `…_search.sql`
    - **FTS approach: trigger-maintained `search_vector`.** It is chosen over a search-time join so
@@ -446,22 +466,29 @@ CI is green, with one passing unit test and one passing pgTAP test.
      setweight(to_tsvector('simple', coalesce(description,'')), 'C') ||
      setweight(to_tsvector('simple', regexp_replace(url, '[/:.?=&_-]+', ' ', 'g')), 'D')
      ```
-     Config `simple` vs `english` is open, see §4.
+     Config `simple` (approved, A4).
    - Triggers:
      - `before insert or update of title, description, note, url on items` sets
        `new.search_vector`, computing from `new.*` plus current tags.
      - `after insert or delete on item_tags` updates the affected item.
      - `after update of name on tags` updates all items with that tag.
-   - `public.search_items(p_query text default null, p_folder_id uuid default null, p_tag_ids uuid[] default null, p_limit int default 20, p_offset int default 0)`:
+   - `public.search_items(p_query text default null, p_folder_id uuid default null, p_no_folder boolean default false, p_tag_ids uuid[] default null, p_limit int default 20, p_offset int default 0)`:
      - Returns `setof` a composite with item columns, `tags jsonb` (`[{id,name}]`) and
        `rank real`.
      - `language sql stable security invoker`, so **RLS applies**.
      - Filters:
-       - `p_query` uses `websearch_to_tsquery('simple', p_query)`.
-       - Folder: `folder_id = p_folder_id`. A separate `p_no_folder boolean` covers "no folder" if
-         clarify wants that filter.
-       - Tags: an item must have **all** of `p_tag_ids` (`having count(distinct tag_id) = cardinality(p_tag_ids)`).
-         The semantics are open, see §4.
+       - `p_query` matches **word prefixes (approved, A14)**: the input goes through
+         `to_tsvector('simple', p_query)`, each resulting lexeme becomes `lexeme:*`, and the terms
+         are joined with `&` into a `to_tsquery('simple', …)`. Raw input never reaches
+         `to_tsquery`, so operators in the input can't break or inject into the query. `reac`
+         finds "React". Websearch syntax (quotes, `-`, `or`) is not supported.
+       - A query with no lexemes (empty, spaces or punctuation only) is treated as
+         `p_query = null` and returns the normal list **(approved, A20)**.
+       - Folder: `folder_id = p_folder_id`. `p_no_folder = true` returns only items with
+         `folder_id is null` **(approved, A13)**; passing it together with `p_folder_id` raises an
+         error.
+       - Tags: an item must have **all** of `p_tag_ids` (`having count(distinct tag_id) = cardinality(p_tag_ids)`)
+         (approved, A3).
      - Order: with a query, `ts_rank_cd(search_vector, q) desc, created_at desc`. Without one,
        `created_at desc, id desc`.
      - The ALL-tags filter is evaluated after the GIN match (group/having). This is fine at v1 scale
@@ -477,7 +504,15 @@ CI is green, with one passing unit test and one passing pgTAP test.
 
 **Cloud project**
 
-- Create the free Supabase project (region near Mostafa, e.g. `eu-central-1`).
+- Mostafa's Supabase account exists (2026-10-20). Mostafa runs `pnpm exec supabase login`; the
+  agent then creates **one** free project from the CLI:
+  `supabase projects create markme --org-id … --region eu-central-1 --db-password …`.
+  - Region `eu-central-1` (Frankfurt). M3's Cloud Run service goes in `europe-west3` (also
+    Frankfurt) so the preview API and the database share a city.
+  - The DB password is generated, stored in Mostafa's password manager, never committed.
+  - The same project serves production and the S0 Q1/Q2 manual run. No separate staging project
+    (the free tier allows two projects; one is enough for v1).
+  - Free projects pause after 7 days without activity; acceptable during development.
 - `supabase link --project-ref … --workdir packages/database`, then `pnpm db:push`.
 - **Decision:** manual push, documented in the README. A CI auto-push needs a stored DB password
   and a production-migration policy, which is not worth it for v1 (constitution IV).
@@ -492,15 +527,15 @@ CI is green, with one passing unit test and one passing pgTAP test.
     ```
   - `reset role` switches back to the admin identity.
 
-| File                     | Asserts                                                                                                                                                                                                                                        |
-| ------------------------ | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `010-schema.test.sql`    | tables, columns, enums, indexes exist (`has_table`, `has_column`, `has_index`); RLS enabled on all 5 (`select relrowsecurity`)                                                                                                                 |
-| `020-profiles.test.sql`  | sign-up trigger creates profile; user A reads own, not B's; cannot insert/delete                                                                                                                                                               |
-| `030-folders.test.sql`   | A CRUD own; A cannot read/update/delete B's; insert with `user_id = B` fails; case-insensitive duplicate name fails; same name for A and B allowed                                                                                             |
-| `040-tags.test.sql`      | same matrix as folders                                                                                                                                                                                                                         |
-| `050-items.test.sql`     | A CRUD own; cross-user denial; insert with B's id rejected; duplicate `normalized_url` for A fails, same URL for B allowed; note > 1000 rejected; A cannot set `folder_id` to B's folder (FK); folder delete → `folder_id` null, item survives |
-| `060-item-tags.test.sql` | A links own item+own tag; A cannot link own item + B's tag, or B's item + own tag; A cannot see B's links; tag delete cascades links, items survive                                                                                            |
-| `070-search.test.sql`    | title match ranks above description-only match; tag-name match found; note match found; URL token match found; folder filter; multi-tag filter; user A's search never returns B's items; tag rename updates results; pagination limit/offset   |
+| File                     | Asserts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
+| ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `010-schema.test.sql`    | tables, columns, enums, indexes exist (`has_table`, `has_column`, `has_index`); RLS enabled on all 5 (`select relrowsecurity`)                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `020-profiles.test.sql`  | sign-up trigger creates profile; user A reads own, not B's; cannot insert/delete                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
+| `030-folders.test.sql`   | A CRUD own; A cannot read/update/delete B's; insert naming `user_id` → permission denied (A16); update of anything but `name` → permission denied; case-insensitive duplicate name fails; same name for A and B allowed                                                                                                                                                                                                                                                                                                                     |
+| `040-tags.test.sql`      | same matrix as folders                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `050-items.test.sql`     | A CRUD own; cross-user denial; insert naming `user_id` (B's or own) → permission denied; duplicate `normalized_url` for A fails, same URL for B allowed; each length cap (A18) and note > 1000 rejected; `normalized_url` without `http(s)://` rejected; embed checks (one of provider/id null → rejected; bad YouTube id → rejected); update of `url`, `normalized_url`, `created_at`, `search_vector` → permission denied (A15); A cannot set `folder_id` to B's folder (FK); folder delete → `folder_id` null, item survives             |
+| `060-item-tags.test.sql` | A links own item+own tag; A cannot link own item + B's tag, or B's item + own tag; A cannot see B's links; tag delete cascades links, items survive                                                                                                                                                                                                                                                                                                                                                                                         |
+| `070-search.test.sql`    | title match ranks above description-only match; tag-name match found; note match found; URL token match found; prefix match (`reac` finds "React"), multi-word prefixes ANDed (A14); input with tsquery operators (`a & !b`, `:*`, `(`) treated as text, no error; empty/punctuation-only query returns the normal list (A20); folder filter; `p_no_folder` returns only unfiled items, and with `p_folder_id` raises (A13); multi-tag filter; user A's search never returns B's items; tag rename updates results; pagination limit/offset |
 
 **Task breakdown**
 
@@ -528,10 +563,8 @@ supabase migration list --linked --workdir packages/database   # local == remote
 
 **Open items for `/clarify`**
 
-- Tag filter: ALL vs ANY.
-- FTS config.
-- Whether "no folder" is a filter option.
-- Whether `tags.created_at` is wanted.
+- None. Settled before `/speckit-specify` (2026-10-20): tag filter ALL (A3), FTS `simple` (A4),
+  `tags.created_at` (A12), and A13–A20 from the M1 design review.
 
 ---
 
@@ -586,7 +619,8 @@ PRD), repeated slashes kept, very long URLs (cap 2048 chars → `invalid`).
 - `itemCreate` = `{ url: httpUrl, folderId?: uuid, tagNames?: tagName[] (max 20), note? }`.
 - `itemUpdate` = partial `{ title (max 300), note, folderId (nullable), tagIds }`.
 - `previewRequest` = `{ url: httpUrl, force?: boolean }`.
-- `previewResponse` = `{ url, title?, description?, imageUrl?, faviconUrl?, siteName?, mediaType, embedHtml?, provider? }`.
+- `previewResponse` = `{ url, title?, description?, imageUrl?, faviconUrl?, siteName?, mediaType, embed?: { provider: 'youtube', id }, provider? }`.
+  - `embed.id` must match `^[A-Za-z0-9_-]{11}$` for YouTube, the same rule as the M1 check (A19).
   - String lengths are capped (title 300, description 1000, URLs 2048).
   - The preview API and the client both parse with it.
 
@@ -677,7 +711,7 @@ Error bodies are `{ error: code }` only, never internal details.
 | `parse/html-metadata.ts` | `cheerio` (reason: robust HTML parsing; no DOM needed). Read the first 2 MB only. Priority: `og:*` → `twitter:*` → `<title>`/`meta[name=description]`. Favicon: `link[rel~=icon]` → `/favicon.ico`. Resolve all URLs relative to the final URL; keep only `http(s)` URLs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `parse/sanitize.ts`      | Strip tags and control chars from every string, decode entities, collapse whitespace, cap lengths (same caps as `previewResponse`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `oembed/*`               | Provider adapters `{ match(url): boolean; fetch(url): Promise<Partial<Preview>> }`, each calling **only its fixed endpoint** through `safeFetch` (the endpoint is a constant, never user-derived). Disabled adapters return `null` → HTML path. YouTube: `https://www.youtube.com/oembed?format=json&url=…`. X: `https://publish.x.com/oembed?omit_script=true&url=…`. Instagram: `https://graph.facebook.com/v25.0/instagram_oembed?url=…` (tokenless; `access_token` added only if `META_OEMBED_TOKEN` is set). X/Instagram return only a `blockquote`: its text becomes the description, and the HTML path fills title/image (S0 Q6).                                                                                                                                                                                                         |
-| `embed_html`             | **Built from server-side templates, never copied from provider HTML (approved, A6).** YouTube: extract the video ID with a strict regex → `<iframe src="https://www.youtube-nocookie.com/embed/{id}" …>`. X/Instagram: `embed_html = null` (their embeds need remote scripts, which MV3 extension pages can't run); title/author/thumbnail still returned.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
+| `embed`                  | **Provider + validated id, never HTML (approved, A6 as amended by A19).** YouTube: extract the video ID with a strict regex → `embed: { provider: 'youtube', id }`. X/Instagram: no `embed` (their embeds need remote scripts, which MV3 extension pages can't run); title/author/thumbnail still returned. Each surface builds its own iframe (`https://www.youtube-nocookie.com/embed/{id}`) from the id.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | `pipeline.ts`            | `validate → cache → oEmbed match → safeFetch HTML → parse → detectMediaType → sanitize → cache.set → return`. On provider failure, fall through to HTML. On HTML failure, throw a typed error mapped to 502/504/422.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 **Docker and deploy**
@@ -691,7 +725,7 @@ Error bodies are `{ error: code }` only, never internal details.
   or the lockfile change:
   1. Google auth via **Workload Identity Federation** (no JSON keys in GitHub).
   2. Build and push to Artifact Registry.
-  3. `gcloud run deploy markme-preview-api --region … --max-instances=1 --min-instances=0 --memory=256Mi --allow-unauthenticated --set-env-vars …`
+  3. `gcloud run deploy markme-preview-api --region europe-west3 --max-instances=1 --min-instances=0 --memory=256Mi --allow-unauthenticated --set-env-vars …`
      - `--allow-unauthenticated` is right because auth is the JWT in the app.
      - Secrets, if any, come from Secret Manager via `--set-secrets`.
   4. Post-deploy smoke: `curl /healthz` → 200, and `POST /v1/preview` without a token → 401.
@@ -727,7 +761,7 @@ policy** to test limits. The production policy is tested separately to always bl
 | M3-T2 | **SSRF test suites** (`ip-policy`, `scheme-port`, `dns`, `redirect`, `limits`, `headers`) committed red/skipped-by-`todo`; `ip-policy.ts` implemented to green its suite |
 | M3-T3 | `resolve.ts` + `safe-fetch.ts` → all SSRF suites green                                                                                                                   |
 | M3-T4 | HTML metadata parser + sanitizer + fixtures                                                                                                                              |
-| M3-T5 | oEmbed adapters + `embed_html` templates + tests                                                                                                                         |
+| M3-T5 | oEmbed adapters + `embed` (provider + id) extraction + tests                                                                                                             |
 | M3-T6 | Pipeline + cache + `POST /v1/preview` + `app.test.ts`                                                                                                                    |
 | M3-T7 | Rate limiters (user, IP, force) + tests                                                                                                                                  |
 | M3-T8 | Dockerfile + `preview-api-image` CI job                                                                                                                                  |
@@ -751,7 +785,6 @@ Run against both local and the Cloud Run URL.
 
 **Open items for `/clarify`**
 
-- `embed_html` template-only approach.
 - Rate-limit numbers.
 - Whether direct image links return the image URL as `imageUrl`.
 - JWKS vs HS256.
@@ -956,8 +989,8 @@ Manual checklist: Google sign-in works; Chrome restart keeps the session; sign o
   - Failed state: placeholder + "Preview unavailable".
   - `<img onError>` swaps to the placeholder.
   - The favicon is an overlaid 16 px `<img>` that hides itself on error.
-  - `embed_html` (YouTube iframe) is **not rendered in the popup**. In M6 detail it renders only
-    from the server template in a sandboxed `<iframe>`. Extension CSP `frame-src` needs the YouTube
+  - The YouTube embed is **not rendered in the popup**. In M6 detail a sandboxed `<iframe>` is
+    built from `embed_provider` + `embed_id` (A19); stored data is never rendered as HTML. Extension CSP `frame-src` needs the YouTube
     nocookie origin; that is decided in the M6 plan.
 - `public/placeholders/{article,video,image,post,link}.svg`: designed per the token palette and
   readable in both themes.
@@ -1277,25 +1310,39 @@ both open, rename a folder in the side panel; the popup's folder list updates.
 
 ## 4. Decisions (all approved by Mostafa, 2026-10-18)
 
-| #   | Proposal                                                                           | Where    | Why                                                                           | Rejected alternative                                 |
-| --- | ---------------------------------------------------------------------------------- | -------- | ----------------------------------------------------------------------------- | ---------------------------------------------------- |
-| A1  | Add `items.favicon_url`, filled by the preview API                                 | M1/M3/M5 | US-9 requires a favicon; the alternative needs the extra `favicon` permission | No favicon overlay; placeholder only                 |
-| A2  | `save_item` RPC (atomic insert + tag upsert + links)                               | M5       | Atomic save; PostgREST can't upsert on `lower(name)`                          | Multi-request client save, with partial-failure risk |
-| A3  | Tag filter = item has **all** selected tags                                        | M1/M6    | Narrows results as tags are added; usual expectation                          | ANY                                                  |
-| A4  | FTS config `simple` (no stemming)                                                  | M1       | Works for mixed English/Arabic content; `english` stems English only          | `english`                                            |
-| A5  | Root URL normalizes without the trailing slash; URLs with credentials are rejected | M2       | Consistent with the "remove trailing slash" rule; avoids storing passwords    | Keep root `/`; strip credentials                     |
-| A6  | `embed_html` built only from server templates (YouTube); X/Instagram embeds `null` | M3       | No untrusted HTML; MV3 pages can't run provider scripts anyway                | Sanitized provider HTML                              |
-| A7  | US-1 fallback if Supabase can't allow unverified sign-in (S0 Q3)                   | M4       | The platform may not support the PRD behavior                                 | Option (a): confirm before first sign-in             |
-| A8  | `alarms` permission only if S0 Q5 shows the worker must refresh tokens             | M4       | Extra permission beyond PRD 7.2                                               | Not added                                            |
-| A9  | No CSS framework; CSS variables + CSS modules                                      | M4       | Popup < 300 ms; no new dependency                                             | Tailwind                                             |
-| A10 | Re-saving an existing URL does not merge new tags/note                             | M5       | Simple, matches D3 "opens the existing item"                                  | Merge                                                |
-| A11 | Manual `db:push` to Supabase Cloud (no CI auto-migrate)                            | M1       | No stored DB password in CI; v1 scale                                         | CI job on `main`                                     |
-| A12 | Add `tags.created_at` (not in PRD 6)                                               | M1       | Stable sort in the tag manager; no cost                                       | Omit; sort tags by name                              |
+| #   | Proposal                                                                                       | Where       | Why                                                                                          | Rejected alternative                                 |
+| --- | ---------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| A1  | Add `items.favicon_url`, filled by the preview API                                             | M1/M3/M5    | US-9 requires a favicon; the alternative needs the extra `favicon` permission                | No favicon overlay; placeholder only                 |
+| A2  | `save_item` RPC (atomic insert + tag upsert + links)                                           | M5          | Atomic save; PostgREST can't upsert on `lower(name)`                                         | Multi-request client save, with partial-failure risk |
+| A3  | Tag filter = item has **all** selected tags                                                    | M1/M6       | Narrows results as tags are added; usual expectation                                         | ANY                                                  |
+| A4  | FTS config `simple` (no stemming)                                                              | M1          | Works for mixed English/Arabic content; `english` stems English only                         | `english`                                            |
+| A5  | Root URL normalizes without the trailing slash; URLs with credentials are rejected             | M2          | Consistent with the "remove trailing slash" rule; avoids storing passwords                   | Keep root `/`; strip credentials                     |
+| A6  | Embeds only for YouTube, stored as provider + id (amended by A19); X/Instagram no embed        | M3          | No untrusted HTML; MV3 pages can't run provider scripts anyway                               | Sanitized provider HTML                              |
+| A7  | US-1 fallback if Supabase can't allow unverified sign-in (S0 Q3)                               | M4          | The platform may not support the PRD behavior                                                | Option (a): confirm before first sign-in             |
+| A8  | `alarms` permission only if S0 Q5 shows the worker must refresh tokens                         | M4          | Extra permission beyond PRD 7.2                                                              | Not added                                            |
+| A9  | No CSS framework; CSS variables + CSS modules                                                  | M4          | Popup < 300 ms; no new dependency                                                            | Tailwind                                             |
+| A10 | Re-saving an existing URL does not merge new tags/note                                         | M5          | Simple, matches D3 "opens the existing item"                                                 | Merge                                                |
+| A11 | Manual `db:push` to Supabase Cloud (no CI auto-migrate)                                        | M1          | No stored DB password in CI; v1 scale                                                        | CI job on `main`                                     |
+| A12 | Add `tags.created_at` (not in PRD 6)                                                           | M1          | Stable sort in the tag manager; no cost                                                      | Omit; sort tags by name                              |
+| A13 | `search_items` takes `p_no_folder boolean`; it can't be combined with `p_folder_id`            | M1/M6       | Items left by a deleted folder must be findable; a flag is clearer than a sentinel id        | Sentinel `p_folder_id`; no filter                    |
+| A14 | Search matches word prefixes: input → `to_tsvector('simple')` lexemes → `lexeme:*` ANDed       | M1          | Search-as-you-type (`reac` finds "React"); keeps the GIN index; no raw input in `to_tsquery` | `websearch_to_tsquery` (whole words); `pg_trgm`      |
+| A15 | Column-level update allowlists; `url`/`normalized_url` immutable after save                    | M1          | New columns stay locked by default; keeps the duplicate rule sound                           | Revoke `user_id` only                                |
+| A16 | Column-level insert allowlists; clients can't set `id`, `user_id`, timestamps, `search_vector` | M1/M5       | Same holes closed on insert; `save_item` (security invoker) inherits them                    | RLS `with check` only                                |
+| A17 | The database trusts the client's `normalized_url` (checks only `^https?://` and length)        | M1          | One normalizer in `packages/domain`; a bad value only affects its author (RLS)               | Re-implement the normalizer in SQL                   |
+| A18 | Length caps: URLs 2048, title 500, description 2000, site_name 200; preview API truncates      | M1/M3       | Bounds storage on the free tier and FTS vector size                                          | No caps beyond note and names                        |
+| A19 | `embed_html` replaced by `embed_provider` enum (`youtube`) + validated `embed_id`              | M1/M2/M3/M6 | No markup stored, so nothing to sanitize; each surface builds its own embed                  | Store template HTML (A6 as first approved)           |
+| A20 | A query with no lexemes is treated as no query (normal list)                                   | M1          | Typing punctuation shouldn't empty the library                                               | Return no results                                    |
 
 A1, A3 and A7 are in PRD v1.1. S0 Q3 showed Supabase cannot allow unverified password sign-in, so
 A7 option (a) applies; the constitution was amended to match (v1.1.1, Auth line).
 S0 Q5 showed the `alarms` permission is not needed (A8: not added). The rest go into the
 milestone specs as written.
+
+A13–A20 come from the M1 design review (2026-10-20) and were approved by Mostafa the same day.
+A19 amends A6, PRD §6 and the constitution (v1.1.2). The same review considered switching auth to
+Clerk and rejected it: the free plan fixes sessions at 7 days (weekly forced sign-in), Google
+sign-in in an extension needs a Sync Host web app, and production needs a paid domain. Supabase
+Auth stays.
 
 ---
 
@@ -1337,6 +1384,7 @@ milestone specs as written.
 
 ## Changelog
 
+- v1.4 (2026-10-20): M1 design review: A13–A20 approved and applied to M1 (search filters and prefix matching, column privileges, length caps, Supabase Cloud project in Frankfurt), M2/M3/M5 (`embed_html` → `embed_provider` + `embed_id`). Clerk considered and rejected.
 - v1.3 (2026-10-18): M0 `/speckit-plan` changes: Node 24, TS 6.0, ESLint 9 kept, Vitest 5, zod 4, Supabase CLI as dev dependency, five CI jobs, gitleaks CLI; M0 open items settled.
 - v1.2 (2026-10-18): §4 decisions approved; S0 results for Q3–Q6 (§2.4) applied to M3/M4 (lockless refresh, no `alarms`, confirm-before-sign-in, tokenless Instagram, `publish.x.com`). Q1/Q2 pending a manual run.
 - v1.1 (2026-10-17): applied plan review (Cursor, GLM 5.2 Max). Changes:
