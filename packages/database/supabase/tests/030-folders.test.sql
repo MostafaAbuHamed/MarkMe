@@ -1,6 +1,6 @@
 begin;
 \ir helpers/identity.psql
-select plan(26);
+select plan(31);
 
 -- A inserts with only name.
 select pg_temp.authenticate_as(pg_temp.user_a());
@@ -197,6 +197,63 @@ select throws_ok(
 select lives_ok(
   $$insert into public.folders (name) values (repeat('a', 100))$$,
   'a folder name of exactly 100 characters succeeds'
+);
+
+-- FR-018: deleting a folder leaves its items in place with no folder.
+
+select pg_temp.authenticate_as(pg_temp.user_a());
+
+select lives_ok(
+  $$insert into public.folders (name) values ('To delete')$$,
+  'A creates a folder holding items'
+);
+
+select lives_ok(
+  $$insert into public.items (url, normalized_url, folder_id)
+    values
+      (
+        'https://example.com/folder-item-1',
+        'https://example.com/folder-item-1',
+        (select id from public.folders where name = 'To delete')
+      ),
+      (
+        'https://example.com/folder-item-2',
+        'https://example.com/folder-item-2',
+        (select id from public.folders where name = 'To delete')
+      )$$,
+  'A puts two items in the folder'
+);
+
+select lives_ok(
+  $$delete from public.folders where name = 'To delete'$$,
+  'A deletes the folder holding two items'
+);
+
+select is(
+  (
+    select count(*)
+    from public.items
+    where url in (
+      'https://example.com/folder-item-1',
+      'https://example.com/folder-item-2'
+    )
+  ),
+  2::bigint,
+  'both items still exist after the folder delete'
+);
+
+select is(
+  (
+    select count(*)
+    from public.items
+    where url in (
+      'https://example.com/folder-item-1',
+      'https://example.com/folder-item-2'
+    )
+      and folder_id is null
+  ),
+  2::bigint,
+  'both items have folder_id null after the folder delete'
 );
 
 select * from finish();

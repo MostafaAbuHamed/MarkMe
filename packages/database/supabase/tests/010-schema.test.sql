@@ -4,7 +4,7 @@ begin;
 -- Schema guard for the current US1 state.
 -- Widen a grant → this file must change on purpose.
 
-select plan(67);
+select plan(71);
 
 -- Tables and columns (data-model.md, post-T009).
 
@@ -484,6 +484,42 @@ select column_privs_are(
   'authenticated',
   array['SELECT'],
   'items.search_vector is outside the authenticated insert and update allowlist'
+);
+
+select column_privs_are(
+  'public',
+  'item_tags',
+  'item_id',
+  'authenticated',
+  array['INSERT', 'SELECT'],
+  'authenticated may insert item_tags.item_id and may not update it'
+);
+
+select column_privs_are(
+  'public',
+  'item_tags',
+  'tag_id',
+  'authenticated',
+  array['INSERT', 'SELECT'],
+  'authenticated may insert item_tags.tag_id and may not update it'
+);
+
+select column_privs_are(
+  'public',
+  'item_tags',
+  'item_id',
+  'anon',
+  '{}',
+  'anon has no privileges on item_tags.item_id'
+);
+
+select column_privs_are(
+  'public',
+  'item_tags',
+  'tag_id',
+  'anon',
+  '{}',
+  'anon has no privileges on item_tags.tag_id'
 );
 
 -- private is not in the API (R4).

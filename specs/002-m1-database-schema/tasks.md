@@ -405,7 +405,7 @@ private.set_updated_at();`
     - The column list must equal the T009 update grant. Add a SQL comment that says so.
   - Append `function_privs_are` for `private.set_updated_at()` (no client execute) to
     `tests/010-schema.test.sql`.
-- [ ] T014 [US2] Delete effects (FR-018, FR-019; tests only, the FKs come from T009):
+- [x] T014 [US2] Delete effects (FR-018, FR-019; tests only, the FKs come from T009):
   - In `tests/030-folders.test.sql`: A deletes a folder holding 2 items. Both items still exist
     with `folder_id is null`.
   - In `tests/040-tags.test.sql`: A deletes a tag linked to 2 items. Its `item_tags` rows are
