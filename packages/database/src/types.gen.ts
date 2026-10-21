@@ -23,7 +23,175 @@ export type Database = {
   };
   public: {
     Tables: {
-      [_ in never]: never;
+      folders: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
+      item_tags: {
+        Row: {
+          item_id: string;
+          tag_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          item_id: string;
+          tag_id: string;
+        };
+        Update: {
+          item_id?: string;
+          tag_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "item_tags_item_id_fkey";
+            columns: ["item_id"];
+            isOneToOne: false;
+            referencedRelation: "items";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "item_tags_tag_id_fkey";
+            columns: ["tag_id"];
+            isOneToOne: false;
+            referencedRelation: "tags";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
+      items: {
+        Row: {
+          created_at: string;
+          description: string | null;
+          embed_id: string | null;
+          embed_provider: Database["public"]["Enums"]["embed_provider"] | null;
+          favicon_url: string | null;
+          folder_id: string | null;
+          id: string;
+          image_url: string | null;
+          media_type: Database["public"]["Enums"]["media_type"];
+          normalized_url: string;
+          note: string | null;
+          preview_fetched_at: string | null;
+          preview_status: Database["public"]["Enums"]["preview_status"];
+          search_vector: unknown;
+          site_name: string | null;
+          title: string | null;
+          updated_at: string;
+          url: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          description?: string | null;
+          embed_id?: string | null;
+          embed_provider?: Database["public"]["Enums"]["embed_provider"] | null;
+          favicon_url?: string | null;
+          folder_id?: string | null;
+          id?: string;
+          image_url?: string | null;
+          media_type?: Database["public"]["Enums"]["media_type"];
+          normalized_url: string;
+          note?: string | null;
+          preview_fetched_at?: string | null;
+          preview_status?: Database["public"]["Enums"]["preview_status"];
+          search_vector?: unknown;
+          site_name?: string | null;
+          title?: string | null;
+          updated_at?: string;
+          url: string;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          description?: string | null;
+          embed_id?: string | null;
+          embed_provider?: Database["public"]["Enums"]["embed_provider"] | null;
+          favicon_url?: string | null;
+          folder_id?: string | null;
+          id?: string;
+          image_url?: string | null;
+          media_type?: Database["public"]["Enums"]["media_type"];
+          normalized_url?: string;
+          note?: string | null;
+          preview_fetched_at?: string | null;
+          preview_status?: Database["public"]["Enums"]["preview_status"];
+          search_vector?: unknown;
+          site_name?: string | null;
+          title?: string | null;
+          updated_at?: string;
+          url?: string;
+          user_id?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "items_folder_id_user_id_fkey";
+            columns: ["folder_id", "user_id"];
+            isOneToOne: false;
+            referencedRelation: "folders";
+            referencedColumns: ["id", "user_id"];
+          },
+        ];
+      };
+      profiles: {
+        Row: {
+          created_at: string;
+          display_name: string | null;
+          id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          display_name?: string | null;
+          id: string;
+        };
+        Update: {
+          created_at?: string;
+          display_name?: string | null;
+          id?: string;
+        };
+        Relationships: [];
+      };
+      tags: {
+        Row: {
+          created_at: string;
+          id: string;
+          name: string;
+          user_id: string;
+        };
+        ComputedFields: never;
+        Insert: {
+          created_at?: string;
+          id?: string;
+          name: string;
+          user_id?: string;
+        };
+        Update: {
+          created_at?: string;
+          id?: string;
+          name?: string;
+          user_id?: string;
+        };
+        Relationships: [];
+      };
     };
     Views: {
       [_ in never]: never;
@@ -32,7 +200,9 @@ export type Database = {
       [_ in never]: never;
     };
     Enums: {
-      [_ in never]: never;
+      embed_provider: "youtube";
+      media_type: "article" | "video" | "image" | "post" | "link";
+      preview_status: "pending" | "ok" | "failed";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -146,6 +316,10 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      embed_provider: ["youtube"],
+      media_type: ["article", "video", "image", "post", "link"],
+      preview_status: ["pending", "ok", "failed"],
+    },
   },
 } as const;
