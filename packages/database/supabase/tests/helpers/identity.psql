@@ -1,0 +1,85 @@
+-- Included with \ir inside each test transaction. Everything lives in pg_temp, so rollback
+-- leaves nothing behind. Call helpers as pg_temp.<name>(...).
+
+create function pg_temp.user_a()
+returns uuid
+language sql
+as $$
+  select '00000000-0000-0000-0000-00000000000a'::uuid;
+$$;
+
+create function pg_temp.user_b()
+returns uuid
+language sql
+as $$
+  select '00000000-0000-0000-0000-00000000000b'::uuid;
+$$;
+
+-- instance_id is nullable on this local auth.users. T005 still fills it; the nil UUID is
+-- GoTrue's default instance. id is the only NOT NULL column without a default. is_sso_user
+-- and is_anonymous are NOT NULL with defaults and are left to those defaults.
+insert into auth.users (
+  instance_id,
+  id,
+  aud,
+  role,
+  email,
+  raw_user_meta_data,
+  created_at,
+  updated_at
+)
+values
+  (
+    '00000000-0000-0000-0000-000000000000'::uuid,
+    pg_temp.user_a(),
+    'authenticated',
+    'authenticated',
+    'a@test.local',
+    '{"full_name":"Alice A"}'::jsonb,
+    now(),
+    now()
+  ),
+  (
+    '00000000-0000-0000-0000-000000000000'::uuid,
+    pg_temp.user_b(),
+    'authenticated',
+    'authenticated',
+    'b@test.local',
+    '{}'::jsonb,
+    now(),
+    now()
+  );
+
+create function pg_temp.authenticate_as(p_user uuid)
+returns void
+language plpgsql
+as $$
+begin
+  set local role authenticated;
+  perform set_config(
+    'request.jwt.claims',
+    json_build_object('sub', p_user, 'role', 'authenticated')::text,
+    true
+  );
+end;
+$$;
+
+create function pg_temp.authenticate_anon()
+returns void
+language plpgsql
+as $$
+begin
+  set local role anon;
+  perform set_config('request.jwt.claims', '{"role":"anon"}', true);
+end;
+$$;
+
+create function pg_temp.reset_identity()
+returns void
+language plpgsql
+as $$
+begin
+  reset role;
+  perform set_config('request.jwt.claims', '', true);
+end;
+$$;

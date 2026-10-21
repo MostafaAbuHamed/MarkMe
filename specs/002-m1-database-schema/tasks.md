@@ -136,7 +136,7 @@ before any SQL is written.
 
 **⚠️ No user-story work begins until this phase is complete.**
 
-- [ ] T005 [P] Create `tests/helpers/identity.psql` (R9):
+- [x] T005 [P] Create `tests/helpers/identity.psql` (R9):
   - Run as `postgres` at the start of each test transaction. Define everything in `pg_temp`, so
     nothing persists. Always call helpers as `pg_temp.<name>(…)`.
   - Insert two users into `auth.users` with fixed values:
