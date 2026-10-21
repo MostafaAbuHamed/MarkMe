@@ -385,7 +385,7 @@ char_length(normalized_url) <= 2048)`. The database never re-normalizes (A17).
 '^[A-Za-z0-9_-]{11}$')`
   - Append `has_index` (or `col_is_unique`) for `items_user_normalized_url_uq` to
     `tests/010-schema.test.sql`.
-- [ ] T013 [US2] `updated_at`: append to `tests/050-items.test.sql`, then migration
+- [x] T013 [US2] `updated_at`: append to `tests/050-items.test.sql`, then migration
       `items_updated_at` (R6).
   - **Tests**:
     - `now()` is fixed inside the test transaction. So first, as `postgres`, set the item's

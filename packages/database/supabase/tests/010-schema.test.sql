@@ -4,7 +4,7 @@ begin;
 -- Schema guard for the current US1 state.
 -- Widen a grant → this file must change on purpose.
 
-select plan(65);
+select plan(67);
 
 -- Tables and columns (data-model.md, post-T009).
 
@@ -562,6 +562,24 @@ select has_index(
   'tags',
   'tags_user_name_uq',
   'tags has index tags_user_name_uq'
+);
+
+select function_privs_are(
+  'private',
+  'set_updated_at',
+  '{}',
+  'anon',
+  '{}',
+  'anon has no privileges on private.set_updated_at()'
+);
+
+select function_privs_are(
+  'private',
+  'set_updated_at',
+  '{}',
+  'authenticated',
+  '{}',
+  'authenticated has no privileges on private.set_updated_at()'
 );
 
 select * from finish();

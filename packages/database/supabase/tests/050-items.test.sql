@@ -1,6 +1,6 @@
 begin;
 \ir helpers/identity.psql
-select plan(90);
+select plan(94);
 
 -- Folders for the composite FK. B's id is read back as postgres: A cannot see it.
 select pg_temp.authenticate_as(pg_temp.user_a());
@@ -729,6 +729,82 @@ select throws_ok(
   '22P02',
   null,
   'an invalid media_type is denied'
+);
+
+-- updated_at moves on client edits. now() is fixed for this transaction, so
+-- postgres backdates it first. That write does not fire the trigger: updated_at
+-- is outside the trigger column list.
+
+select pg_temp.reset_identity();
+
+update public.items
+set updated_at = now() - interval '1 day'
+where url = 'https://example.com/a';
+
+select pg_temp.authenticate_as(pg_temp.user_a());
+
+update public.items
+set title = 'Touched title'
+where url = 'https://example.com/a';
+
+select is(
+  (select updated_at from public.items where url = 'https://example.com/a'),
+  now(),
+  'updating title sets updated_at to now()'
+);
+
+select pg_temp.reset_identity();
+
+update public.items
+set updated_at = now() - interval '1 day'
+where url = 'https://example.com/a';
+
+select pg_temp.authenticate_as(pg_temp.user_a());
+
+update public.items
+set note = 'Touched note'
+where url = 'https://example.com/a';
+
+select is(
+  (select updated_at from public.items where url = 'https://example.com/a'),
+  now(),
+  'updating note sets updated_at to now()'
+);
+
+select pg_temp.reset_identity();
+
+update public.items
+set updated_at = now() - interval '1 day'
+where url = 'https://example.com/a';
+
+select pg_temp.authenticate_as(pg_temp.user_a());
+
+update public.items
+set folder_id = (select id from public.folders where name = 'A folder')
+where url = 'https://example.com/a';
+
+select is(
+  (select updated_at from public.items where url = 'https://example.com/a'),
+  now(),
+  'updating folder_id sets updated_at to now()'
+);
+
+select pg_temp.reset_identity();
+
+update public.items
+set updated_at = now() - interval '1 day'
+where url = 'https://example.com/a';
+
+select pg_temp.authenticate_as(pg_temp.user_a());
+
+update public.items
+set preview_status = 'failed'
+where url = 'https://example.com/a';
+
+select is(
+  (select updated_at from public.items where url = 'https://example.com/a'),
+  now(),
+  'updating preview_status sets updated_at to now()'
 );
 
 select * from finish();
