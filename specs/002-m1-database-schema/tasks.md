@@ -118,7 +118,7 @@ before any SQL is written.
     - Summary/Scale: 9 migrations.
     - Constitution Check "Workflow" row: one PR per user story.
   - `/docs/IMPLEMENTATION_PLAN.md` §3 M1 task list: the same, per its change rule.
-- [ ] T004 Record the PR-per-story trial (approved by Mostafa on 2026-10-21 for M1 only):
+- [x] T004 Record the PR-per-story trial (approved by Mostafa on 2026-10-21 for M1 only):
   - The constitution ("one commit and one PR per task") stays unchanged for now.
   - `specs/002-m1-database-schema/plan.md`:
     - Constitution Check "Workflow" row: one commit per task, one PR per user story, as an M1 trial
