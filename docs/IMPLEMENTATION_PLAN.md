@@ -367,9 +367,20 @@ CI is green, with one passing unit test and one passing pgTAP test.
 > combined with folder and tag filters, ranked by relevance and paginated. The schema is also
 > applied to the hosted production database.
 
-**Technical design: migrations** (one file per concern, in order)
+**Technical design: migrations** (nine files in order; story-grouped PRs in
+`specs/002-m1-database-schema/tasks.md`. Each table migration ships grants and RLS in the same
+file—no standalone RLS migration.)
 
-1. `…_extensions_and_types.sql`
+**Supabase default grants (M1 plan R2).** New `public` tables grant everything, TRUNCATE
+included, to `anon` and `authenticated`. New functions grant EXECUTE to them and to `PUBLIC`. Each
+migration therefore:
+
+- revokes all from `anon` on every table it creates;
+- revokes `truncate, references, trigger` from `authenticated`;
+- revokes EXECUTE from `public, anon, authenticated` on every function it creates, then grants it
+  on `search_items` to `authenticated`.
+
+1. `…_extensions_and_types.sql` (foundational, PR 1)
    - No `create extension pgtap`: `supabase test db` enables it, and production should not carry it
      (M1 plan R8).
    - `create schema private;` with `revoke all on schema private from public, anon, authenticated`.
@@ -378,27 +389,99 @@ CI is green, with one passing unit test and one passing pgTAP test.
    - `create type public.preview_status as enum ('pending','ok','failed');`
    - `create type public.embed_provider as enum ('youtube');` **(approved, A19)**. A new provider
      is `alter type … add value` plus one branch in the `embed_id` check.
-   - A shared `private.set_updated_at()` trigger function.
+   - `private.set_updated_at()` is **not** here; it lands in `items_updated_at` (US2).
 
-2. `…_profiles.sql`
+2. `…_profiles.sql` (US1, PR 1)
    - `profiles(id uuid primary key references auth.users on delete cascade, display_name text check (char_length(display_name) <= 100), created_at timestamptz not null default now())`.
      The cap and an `update (display_name)`-only grant are **(approved 2026-10-21, M1 plan R3)**.
    - `private.handle_new_user()`: `security definer`, `set search_path = ''`. It inserts
      `(new.id, left(full_name or email local part, 100))` from `new.raw_user_meta_data->>'full_name'`
      and `new.email`. It runs from an `after insert on auth.users` trigger.
+   - `alter table … enable row level security`.
+   - `profiles`: select/update where `id = auth.uid()`. No insert or delete from clients (the
+     trigger does it).
+   - Supabase default grants are handled as described above (M1 plan R2).
 
-3. `…_folders_tags.sql`
-   - `folders(id uuid pk default gen_random_uuid(), user_id uuid not null default auth.uid() references auth.users on delete cascade, name text not null check (length(btrim(name)) between 1 and 100), created_at timestamptz not null default now(), unique (id, user_id))`.
-     The extra `unique (id, user_id)` is the target of the composite FK below.
-   - `create unique index folders_user_name_uq on folders (user_id, lower(name));`
-   - `tags(...)` has the same shape. PRD 6 lists no `tags.created_at`; adding it is
-     **(approved, A12)**. It is useful for sorting and costs nothing.
-   - `create unique index tags_user_name_uq on tags (user_id, lower(name));`
+3. `…_folders_tags.sql` (US1, PR 1)
+   - `folders(id uuid pk default gen_random_uuid(), user_id uuid not null default auth.uid() references auth.users on delete cascade, name text not null, created_at timestamptz not null default now(), unique (id, user_id))`.
+     The extra `unique (id, user_id)` is the target of the composite FK below. Name length check and
+     `create unique index folders_user_name_uq on folders (user_id, lower(name))` land in
+     `name_rules` (US2).
+   - `tags(...)` has the same column shape (name unconstrained until US2). PRD 6 lists no
+     `tags.created_at`; adding it is **(approved, A12)**. It is useful for sorting and costs nothing.
+     `create unique index tags_user_name_uq on tags (user_id, lower(name))` is also in `name_rules`.
+   - `alter table … enable row level security` on both tables.
+   - `folders`, `tags`: four policies each (`select`/`insert`/`update`/`delete`), all with
+     `to authenticated`.
+     - `using` and `with check`: `user_id = (select auth.uid())`. The `(select …)` wrapper is the
+       Supabase-recommended form so the planner caches the call.
+   - **Column-level privileges (approved, A15, A16).** Revoke table-wide `insert`/`update` from
+     `authenticated` on folders/tags, then grant allowlists. A new column stays locked until it is
+     granted on purpose. Column defaults apply without the privilege; RLS stays as the second
+     layer.
+     - `folders`, `tags`: insert and update `name` only.
+     - Never granted: `id`, `user_id`, `created_at`. An insert that names `user_id` fails with
+       _permission denied_ before RLS is reached.
+   - Supabase default grants are handled as described above (M1 plan R2).
 
-4. `…_items.sql`
-   - `items`:
+4. `…_items.sql` (US1, PR 1)
+   - `items` (columns and types; URL/length/embed **checks**, `unique (user_id, normalized_url)`,
+     the `updated_at` trigger and the GIN index come in US2/US3 migrations below):
      - `id uuid pk default gen_random_uuid()`
      - `user_id uuid not null default auth.uid() references auth.users on delete cascade`
+     - `url text not null`
+     - `normalized_url text not null`
+     - `title text`
+     - `description text`
+     - `image_url text`
+     - `favicon_url text` **(approved, A1)**
+     - `site_name text`
+     - `media_type media_type not null default 'link'`
+     - `embed_provider embed_provider`, `embed_id text` **(approved, A19; replaces `embed_html`)**
+     - `folder_id uuid`
+     - `note text`
+     - `preview_status preview_status not null default 'pending'`
+     - `preview_fetched_at timestamptz`
+     - `created_at`, `updated_at timestamptz not null default now()`
+     - `search_vector tsvector not null default ''::tsvector`
+     - `foreign key (folder_id, user_id) references folders (id, user_id) on delete set null (folder_id)`
+   - The composite FK (Postgres 15+ column list) makes it **impossible** to put an item in another
+     user's folder. Deleting a folder nulls only `folder_id`.
+   - `item_tags(item_id uuid references items on delete cascade, tag_id uuid references tags on delete cascade, primary key (item_id, tag_id))`.
+   - Indexes:
+     - `items (user_id, created_at desc, id desc)` for the list.
+     - `items (user_id, folder_id)`.
+     - `item_tags (tag_id)`.
+   - `alter table … enable row level security` on `items` and `item_tags`.
+   - `items`: four policies each (`select`/`insert`/`update`/`delete`), all with `to authenticated`.
+     - `using` and `with check`: `user_id = (select auth.uid())`. The `(select …)` wrapper is the
+       Supabase-recommended form so the planner caches the call.
+   - `item_tags`:
+     - select/delete `using`: **both** sides owned, i.e. `exists (select 1 from items i where i.id = item_id and i.user_id = (select auth.uid())) and exists (select 1 from tags t where t.id = tag_id and t.user_id = (select auth.uid()))`.
+       Checking both sides is defense in depth against a bad row from an admin path.
+     - insert `with check` requires **both** the item and the tag to be owned.
+     - No update policy (rows are immutable; delete + insert).
+   - **Column-level privileges (approved, A15, A16).** Revoke table-wide `insert`/`update` from
+     `authenticated` on items, then grant allowlists. A new column stays locked until it is granted
+     on purpose. Column defaults apply without the privilege; RLS stays as the second layer.
+     - `items` insert: `url, normalized_url, title, description, image_url, favicon_url, site_name, media_type, embed_provider, embed_id, folder_id, note, preview_status, preview_fetched_at`.
+     - `items` update: the same list **without** `url` and `normalized_url`. A saved URL is
+       immutable (US-14 edits title, note, folder and tags only); changing it means delete and
+       save again.
+     - Never granted: `id`, `user_id`, `created_at`, `updated_at`, `search_vector`. An insert
+       that names `user_id` fails with _permission denied_ before RLS is reached.
+   - Supabase default grants are handled as described above (M1 plan R2).
+
+5. `…_name_rules.sql` (US2, PR 2)
+   - On `public.folders` and `public.tags`:
+     - `alter table … add constraint … check (char_length(btrim(name)) between 1 and 100);` (same
+       rule as the original inline `length(btrim(name)) between 1 and 100` on create).
+     - `create unique index folders_user_name_uq on folders (user_id, lower(name));`
+     - `create unique index tags_user_name_uq on tags (user_id, lower(name));`
+
+6. `…_item_rules.sql` (US2, PR 2)
+   - On `items`, add the checks and uniqueness that US1 deferred (constraint names in the Spec Kit
+     tasks):
      - `url text not null check (url ~* '^https?://' and char_length(url) <= 2048)`
      - `normalized_url text not null check (normalized_url ~* '^https?://' and char_length(normalized_url) <= 2048)`.
        The client computes it with the `packages/domain` normalizer; the database does not
@@ -410,69 +493,26 @@ CI is green, with one passing unit test and one passing pgTAP test.
      - `site_name text check (char_length(site_name) <= 200)`
      - The length caps are **(approved, A18)**. They are hard ceilings above the M2 `previewResponse`
        caps; the preview API truncates to fit, so a long `og:description` never fails a save.
-     - `media_type media_type not null default 'link'`
+     - `note text check (char_length(note) <= 1000)`
      - `embed_provider embed_provider`, `embed_id text` **(approved, A19; replaces `embed_html`)**:
        `check ((embed_provider is null) = (embed_id is null))` and
        `check (embed_provider is distinct from 'youtube' or embed_id ~ '^[A-Za-z0-9_-]{11}$')`.
        No markup is stored; each surface builds its own embed from the provider and id.
-     - `folder_id uuid`
-     - `note text check (char_length(note) <= 1000)`
-     - `preview_status preview_status not null default 'pending'`
-     - `preview_fetched_at timestamptz`
-     - `created_at`, `updated_at timestamptz not null default now()`
-     - `search_vector tsvector not null default ''::tsvector`
      - `unique (user_id, normalized_url)`
-     - `foreign key (folder_id, user_id) references folders (id, user_id) on delete set null (folder_id)`
-   - The composite FK (Postgres 15+ column list) makes it **impossible** to put an item in another
-     user's folder. Deleting a folder nulls only `folder_id`.
-   - `item_tags(item_id uuid references items on delete cascade, tag_id uuid references tags on delete cascade, primary key (item_id, tag_id))`.
-   - Indexes:
-     - `items (user_id, created_at desc, id desc)` for the list.
-     - `items (user_id, folder_id)`.
-     - `item_tags (tag_id)`.
-     - `gin (search_vector)`.
+
+7. `…_items_updated_at.sql` (US2, PR 2)
+   - A shared `private.set_updated_at()` trigger function in `private`, with EXECUTE revoked from
+     client roles (M1 plan R2).
    - `updated_at` trigger on `items`: `before update of <the A15 update allowlist>`, so a
      search-data refresh does not bump it (M1 plan R6).
 
-5. `…_rls.sql`
-   - `alter table … enable row level security` on all five tables.
-   - `profiles`: select/update where `id = auth.uid()`. No insert or delete from clients (the
-     trigger does it).
-   - `folders`, `tags`, `items`: four policies each (`select`/`insert`/`update`/`delete`), all with
-     `to authenticated`.
-     - `using` and `with check`: `user_id = (select auth.uid())`. The `(select …)` wrapper is the
-       Supabase-recommended form so the planner caches the call.
-   - `item_tags`:
-     - select/delete `using`: **both** sides owned, i.e. `exists (select 1 from items i where i.id = item_id and i.user_id = (select auth.uid())) and exists (select 1 from tags t where t.id = tag_id and t.user_id = (select auth.uid()))`.
-       Checking both sides is defense in depth against a bad row from an admin path.
-     - insert `with check` requires **both** the item and the tag to be owned.
-     - No update policy (rows are immutable; delete + insert).
-   - **Column-level privileges (approved, A15, A16).** Revoke table-wide `insert`/`update` from
-     `authenticated` on items/folders/tags, then grant allowlists. A new column stays locked until
-     it is granted on purpose. Column defaults apply without the privilege; RLS stays as the second
-     layer.
-     - `items` insert: `url, normalized_url, title, description, image_url, favicon_url, site_name, media_type, embed_provider, embed_id, folder_id, note, preview_status, preview_fetched_at`.
-     - `items` update: the same list **without** `url` and `normalized_url`. A saved URL is
-       immutable (US-14 edits title, note, folder and tags only); changing it means delete and
-       save again.
-     - `folders`, `tags`: insert and update `name` only.
-     - Never granted: `id`, `user_id`, `created_at`, `updated_at`, `search_vector`. An insert
-       that names `user_id` fails with _permission denied_ before RLS is reached.
-   - **Supabase default grants (M1 plan R2).** New `public` tables grant everything, TRUNCATE
-     included, to `anon` and `authenticated`. New functions grant EXECUTE to them and to
-     `PUBLIC`. Each migration therefore:
-     - revokes all from `anon` on every table;
-     - revokes `truncate, references, trigger` from `authenticated`;
-     - revokes EXECUTE from `public, anon, authenticated` on every function, then grants it on
-       `search_items` to `authenticated`.
-
-     `010-schema` asserts the final privileges.
-
-6. `…_search.sql`
+8. `…_search_vector.sql` (US3, PR 3)
    - **FTS approach: trigger-maintained `search_vector`.** It is chosen over a search-time join so
      the GIN index covers tag names too. The trade-off: a tag rename rewrites the vectors of its
      items, which is fine at personal-collection scale.
-   - `public.item_search_vector(p_item_id uuid) returns tsvector` builds:
+   - The vector builder is implemented as
+     `private.item_search_vector(p_item_id uuid, p_title text, p_description text, p_note text, p_url text) returns tsvector`
+     (five explicit arguments instead of reading from a single-row type). Conceptually it builds:
      ```sql
      setweight(to_tsvector('simple', coalesce(title,'')), 'A') ||
      setweight(to_tsvector('simple', coalesce(string_agg(t.name,' '),'')), 'B') ||
@@ -480,8 +520,7 @@ CI is green, with one passing unit test and one passing pgTAP test.
      setweight(to_tsvector('simple', coalesce(description,'')), 'C') ||
      setweight(to_tsvector('simple', regexp_replace(url, '[/:.?=&_-]+', ' ', 'g')), 'D')
      ```
-     Config `simple` (approved, A4). It lives in `private` as
-     `private.item_search_vector(p_item_id, p_title, p_description, p_note, p_url)`.
+     Config `simple` (approved, A4).
    - The trigger functions are `security definer`, `set search_path = ''`, in `private`.
      `authenticated` has no UPDATE on `search_vector` and no USAGE on `private`, so they could not
      refresh the vector otherwise (M1 plan R5).
@@ -490,6 +529,10 @@ CI is green, with one passing unit test and one passing pgTAP test.
        `new.search_vector`, computing from `new.*` plus current tags.
      - `after insert or delete on item_tags` updates the affected item.
      - `after update of name on tags` updates all items with that tag.
+   - Indexes:
+     - `gin (search_vector)` (e.g. `items_search_vector_idx`).
+
+9. `…_search_items.sql` (US3, PR 3)
    - `public.search_items(p_query text default null, p_folder_id uuid default null, p_no_folder boolean default false, p_tag_ids uuid[] default null, p_limit int default 20, p_offset int default 0)`:
      - `returns table` with the item columns (no `search_vector` or `user_id`), `tags jsonb`
        (`[{id,name}]`) and `rank real`.
@@ -515,6 +558,9 @@ CI is green, with one passing unit test and one passing pgTAP test.
      - Offset pagination is acceptable at 10k items per user. Keyset is a later optimization.
      - `p_limit` is clamped to 1–50 and `p_offset` to ≥ 0. An empty `p_tag_ids` means no tag
        filter, and duplicate ids are ignored.
+   - Supabase default grants are handled as described above (M1 plan R2).
+
+`010-schema` asserts the final privileges after all nine migrations.
 
 **Types**
 
@@ -563,19 +609,17 @@ CI is green, with one passing unit test and one passing pgTAP test.
 
 **Task breakdown**
 
-| ID    | Task                                                                                                          | Proof                                 |
-| ----- | ------------------------------------------------------------------------------------------------------------- | ------------------------------------- |
-| M1-T1 | Test helpers (two users, identity switch)                                                                     | Used by every later test              |
-| M1-T2 | Types/enums + `profiles` + sign-up trigger, with `020` test                                                   | `db:test`                             |
-| M1-T3 | `folders`, `tags` + unique indexes, with `030`/`040` (RLS included in same PR so no table merges without RLS) | `db:test`                             |
-| M1-T4 | `items`, `item_tags`, composite FK, indexes, `updated_at`, with `050`/`060` + RLS                             | `db:test`                             |
-| M1-T5 | `010-schema` test (RLS-enabled assertion for every table)                                                     | `db:test`                             |
-| M1-T6 | FTS vector + triggers + `search_items`, with `070`                                                            | `db:test`                             |
-| M1-T7 | Generated types + package exports; CI drift check now meaningful                                              | `db` job green                        |
-| M1-T8 | Cloud project, link, push; README "Database" section                                                          | Tables visible in the cloud dashboard |
+Authoritative numbered tasks, migration filenames and PR grouping:
+`specs/002-m1-database-schema/tasks.md`.
 
-The constitution says a table without RLS does not merge, so each table PR includes its policies
-(T3, T4).
+| PR / story               | Tasks     | Delivers                                                                                  |
+| ------------------------ | --------- | ----------------------------------------------------------------------------------------- |
+| US1 (private collection) | T001–T010 | Setup, harness, `extensions_and_types`, `profiles`, `folders_tags`, `items`, `010-schema` |
+| US2 (product rules)      | T011–T014 | `name_rules`, `item_rules`, `items_updated_at`, delete-effect pgTAP                       |
+| US3 (search)             | T015–T016 | `search_vector`, `search_items`, `070-search`                                             |
+| US4 + polish             | T017–T022 | Package exports, `db:push`, README, cloud push (T020 manual), exit checks                 |
+
+Each table migration includes its grants and RLS in the same file (constitution I).
 
 **Exit verification**
 
@@ -1408,6 +1452,11 @@ Auth stays.
 
 ## Changelog
 
+- v1.6 (2026-10-21): M1 story-grouped migrations (`specs/002-m1-database-schema/tasks.md` T003):
+  nine migrations (`extensions_and_types`, `profiles`, `folders_tags`, `items`, `name_rules`,
+  `item_rules`, `items_updated_at`, `search_vector`, `search_items`) instead of five monolithic
+  files; product rules and search split across US2/US3 PRs. Task list aligned to T001–T022 and
+  one PR per user story for M1.
 - v1.5 (2026-10-20): M1 `/speckit-plan` changes (`specs/002-m1-database-schema/research.md`):
   - Explicit revokes for Supabase's default grants (anon, TRUNCATE, EXECUTE).
   - A `private` schema for internal functions, with security-definer vector refresh.

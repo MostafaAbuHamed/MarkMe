@@ -92,7 +92,7 @@ before any SQL is written.
   - Record the approval in `specs/002-m1-database-schema/research.md` (R3 heading),
     `specs/002-m1-database-schema/plan.md` (deviation 2) and `/docs/IMPLEMENTATION_PLAN.md` (the
     "(proposed, M1 plan R3; pending approval)" text and the changelog line).
-- [ ] T003 Align the design docs with the story-grouped migration layout. Same content, new
+- [x] T003 Align the design docs with the story-grouped migration layout. Same content, new
       placement:
   - `specs/002-m1-database-schema/contracts/database-package.md`, "Files" tree: list the nine
     migrations in this order:

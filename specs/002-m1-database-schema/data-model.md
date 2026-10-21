@@ -45,12 +45,14 @@ nullif(split_part(email, '@', 1), '')), 100)`; null when neither exists (FR-002)
 | `created_at` | timestamptz | no   | `now()`             |                                              |
 
 - `unique (id, user_id)`: target of the items composite FK.
-- `unique index folders_user_name_uq on (user_id, lower(name))` (FR-013).
+- `unique index folders_user_name_uq on (user_id, lower(name))` (FR-013). Name length check and
+  both per-user unique name indexes are added in migration `name_rules` (US2).
 
 ### `tags`
 
 Same columns and rules as `folders` (`created_at` per A12), with `unique (id, user_id)` and
-`unique index tags_user_name_uq on (user_id, lower(name))`.
+`unique index tags_user_name_uq on (user_id, lower(name))` (constraints and indexes in
+`name_rules`, US2).
 
 ### `items`
 
@@ -76,10 +78,12 @@ Same columns and rules as `folders` (`created_at` per A12), with `unique (id, us
 | `updated_at`         | timestamptz      | no   | `now()`             | bumped on item edits (R6)                           |
 | `search_vector`      | tsvector         | no   | `''::tsvector`      | system-maintained (R5)                              |
 
-- `unique (user_id, normalized_url)` (FR-010).
+- `unique (user_id, normalized_url)` (FR-010). Item URL/normalized URL checks, length caps, embed
+  checks and this uniqueness constraint are added in migration `item_rules` (US2).
 - `foreign key (folder_id, user_id) references folders (id, user_id) on delete set null
 (folder_id)` (FR-006, FR-018; R1).
-- Indexes: `(user_id, created_at desc, id desc)`, `(user_id, folder_id)`, `gin (search_vector)`.
+- Indexes: `(user_id, created_at desc, id desc)` and `(user_id, folder_id)` on `items` (US1).
+  `gin (search_vector)` is created in migration `search_vector` (US3).
 
 ### `item_tags`
 
@@ -115,7 +119,7 @@ Delete effects (FR-018, FR-019):
 | Object                               | Fires on                                                   | Does                                                              |
 | ------------------------------------ | ---------------------------------------------------------- | ----------------------------------------------------------------- |
 | `private.handle_new_user()`          | `after insert on auth.users`                               | inserts the profile (definer)                                     |
-| `private.set_updated_at()`           | `before update of <A15 item update allowlist> on items`    | `new.updated_at = now()`                                          |
+| `private.set_updated_at()`           | `before update of <A15 item update allowlist> on items`    | `new.updated_at = now()` (migration `items_updated_at`, US2)      |
 | `private.items_set_search_vector()`  | `before insert or update of title, description, note, url` | `new.search_vector = private.item_search_vector(…)` (definer, R5) |
 | `private.item_tags_refresh_vector()` | `after insert or delete on item_tags` (row)                | recomputes the affected item's vector (definer, R5)               |
 | `private.tags_refresh_vectors()`     | `after update of name on tags` (row)                       | recomputes vectors of items linked to the tag (definer, R5)       |

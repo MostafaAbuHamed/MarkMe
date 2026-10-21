@@ -7,7 +7,7 @@
 
 ## Summary
 
-M1 adds the MarkMe data layer to `packages/database`. It is delivered as five migrations and eight
+M1 adds the MarkMe data layer to `packages/database`. It is delivered as nine migrations and eight
 pgTAP test files.
 
 - **Tables**: `profiles`, `folders`, `tags`, `items` and `item_tags`, with the PRD §6 fields
@@ -68,7 +68,7 @@ in policies.
 **Scale/Scope**:
 
 - 5 tables, 3 enums, 1 RPC and 6 internal functions.
-- 5 migrations, 8 test files, 1 new root script and 1 README section.
+- 9 migrations, 8 test files, 1 new root script and 1 README section.
 - Personal-collection scale: up to about 10,000 items per user.
 
 ## Constitution Check
@@ -83,7 +83,7 @@ _GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design (below
 | I. Secrets only in env/secret store; none in git                               | The cloud DB password goes only into Mostafa's password manager, and the project ref only into git-ignored `.temp/`. No CI secret (R10)                                                                 | ✅     |
 | I. Embeds stored as provider + validated id, never HTML                        | `embed_provider` enum + `embed_id` format check; no markup column (A19)                                                                                                                                 | ✅     |
 | II. `packages/database` owns migrations and generated types                    | Yes. The package exports types only; the client factory stays in `domain` (M2)                                                                                                                          | ✅     |
-| II. Schema changes only through migrations; regenerate types                   | Five migrations made with `pnpm db:new`. `db:types` is committed and the drift check is in CI                                                                                                           | ✅     |
+| II. Schema changes only through migrations; regenerate types                   | Nine migrations made with `pnpm db:new`. `db:types` is committed and the drift check is in CI                                                                                                           | ✅     |
 | III. pgTAP for RLS, uniqueness, FTS ranking                                    | `030`–`060` cover uniqueness; `070` covers ranking and filters                                                                                                                                          | ✅     |
 | III. Never weaken a test                                                       | No test is skipped. Each privilege widening fails `010`                                                                                                                                                 | ✅     |
 | IV. Simple first; no new dependency without reason                             | No new dependency. The `private` schema (R4) is the one new structure, and it replaces per-function revokes as the main guard. Offset pagination; trigger FTS over a search-time join (approved design) | ✅     |
@@ -146,7 +146,7 @@ specs/002-m1-database-schema/
     │   ├── index.ts                      # re-exports generated helpers + SearchItemRow
     │   └── types.gen.ts                  # regenerated, committed
     └── supabase/
-        ├── migrations/                   # 5 files (see contracts/database-package.md)
+        ├── migrations/                   # 9 files (see contracts/database-package.md)
         └── tests/
             ├── helpers/identity.psql
             └── 000…070 *.test.sql
@@ -155,24 +155,12 @@ specs/002-m1-database-schema/
 **Structure Decision**: All work stays in `packages/database`, plus one root script and the README.
 No app code changes in M1.
 
-### Task shape (input for `/speckit-tasks`)
+### Task shape
 
-Same as the implementation plan's breakdown. Each table's task carries its own grants, RLS and
-tests:
-
-| ID  | Task                                                                                          | Proof                        |
-| --- | --------------------------------------------------------------------------------------------- | ---------------------------- |
-| T1  | `tests/helpers/identity.psql` (users A and B, identity switch)                                | used by `020` onward         |
-| T2  | `private` schema, enums, `set_updated_at`; `profiles` + grants + RLS + sign-up trigger; `020` | `db:test`                    |
-| T3  | `folders`, `tags` + indexes + grants + RLS; `030`, `040`                                      | `db:test`                    |
-| T4  | `items`, `item_tags`, composite FK, indexes, `updated_at` trigger, grants, RLS; `050`, `060`  | `db:test`                    |
-| T5  | `010-schema`: tables, columns, indexes, RLS flags, table/column/function privileges           | `db:test`                    |
-| T6  | Vector builder, triggers, `search_items`; `070`                                               | `db:test`                    |
-| T7  | `db:types`, `index.ts` re-exports and `SearchItemRow`                                         | `db` job green (drift check) |
-| T8  | Cloud project, link, `db:push` script, README "Database" section                              | V5 in quickstart             |
-
-T1 goes into the PR for T2 if a helpers-only PR would have nothing to run against. That is decided
-in `/speckit-tasks`.
+The authoritative task list, migration names and PR grouping live in [tasks.md](tasks.md)
+(Workflow PR table and T001–T022). Each table's migration task carries its own grants, RLS and
+pgTAP proof; US2 adds `name_rules`, `item_rules` and `items_updated_at`; US3 adds
+`search_vector` and `search_items`.
 
 ## Complexity Tracking
 

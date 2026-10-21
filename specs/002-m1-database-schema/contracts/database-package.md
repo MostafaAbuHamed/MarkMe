@@ -22,11 +22,15 @@ fails on any difference (M0, unchanged).
 ```text
 packages/database/supabase/
 ├── migrations/
-│   ├── <ts>_extensions_and_types.sql   # private schema, enums, set_updated_at
-│   ├── <ts>_profiles.sql               # table, grants, RLS, handle_new_user + trigger
-│   ├── <ts>_folders_tags.sql           # tables, indexes, grants, RLS
-│   ├── <ts>_items.sql                  # items, item_tags, FK, indexes, grants, RLS, updated_at
-│   └── <ts>_search.sql                 # vector builder, triggers, search_items
+│   ├── <ts>_extensions_and_types.sql   # private schema, public enums (no table objects yet)
+│   ├── <ts>_profiles.sql               # profiles table, grants, RLS, handle_new_user + trigger
+│   ├── <ts>_folders_tags.sql           # folders and tags, composite keys, grants, RLS
+│   ├── <ts>_items.sql                  # items, item_tags, composite FK, list indexes, grants, RLS
+│   ├── <ts>_name_rules.sql             # folder/tag name checks and per-user unique name indexes (US2)
+│   ├── <ts>_item_rules.sql             # item checks and unique (user_id, normalized_url) (US2)
+│   ├── <ts>_items_updated_at.sql       # private.set_updated_at + items trigger (US2)
+│   ├── <ts>_search_vector.sql          # vector builder, refresh triggers, GIN on search_vector (US3)
+│   └── <ts>_search_items.sql           # public.search_items RPC and EXECUTE grant (US3)
 └── tests/
     ├── helpers/identity.psql           # \ir-included, pg_temp only
     ├── 000-smoke.test.sql              # existing
@@ -41,7 +45,9 @@ packages/database/supabase/
 
 Migrations are created with `pnpm db:new <name>` so timestamps are real; the names above are the
 `<name>` part. Each table's migration carries its own grants and RLS policies, so no table exists
-without them at any commit (constitution I).
+without them at any commit (constitution I). Per-story PRs add product rules (`name_rules`,
+`item_rules`, `items_updated_at`) and search (`search_vector`, `search_items`) after the US1
+table migrations land.
 
 ## Root commands
 
