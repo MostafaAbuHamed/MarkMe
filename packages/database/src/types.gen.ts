@@ -32,7 +32,9 @@ export type Database = {
       [_ in never]: never;
     };
     Enums: {
-      [_ in never]: never;
+      embed_provider: "youtube";
+      media_type: "article" | "video" | "image" | "post" | "link";
+      preview_status: "pending" | "ok" | "failed";
     };
     CompositeTypes: {
       [_ in never]: never;
@@ -146,6 +148,10 @@ export const Constants = {
     Enums: {},
   },
   public: {
-    Enums: {},
+    Enums: {
+      embed_provider: ["youtube"],
+      media_type: ["article", "video", "image", "post", "link"],
+      preview_status: ["pending", "ok", "failed"],
+    },
   },
 } as const;

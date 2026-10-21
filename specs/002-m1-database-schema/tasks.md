@@ -157,7 +157,7 @@ before any SQL is written.
     - `pnpm db:test` still passes, and the helpers file is not run as a test.
     - A scratch test that `\ir`s it, then `authenticate_as(user_a())`, then
       `select auth.uid()`, returns A's id. Delete the scratch file before committing.
-- [ ] T006 [P] Migration `extensions_and_types` (`pnpm db:new extensions_and_types`):
+- [x] T006 [P] Migration `extensions_and_types` (`pnpm db:new extensions_and_types`):
   - `create schema private;`
   - `revoke all on schema private from public, anon, authenticated;` (R4).
   - `create type public.media_type as enum ('article', 'video', 'image', 'post', 'link');`
