@@ -4,7 +4,7 @@ begin;
 -- Schema guard for the current US1 state.
 -- Widen a grant → this file must change on purpose.
 
-select plan(64);
+select plan(65);
 
 -- Tables and columns (data-model.md, post-T009).
 
@@ -534,6 +534,13 @@ select has_index(
   'items',
   'items_user_folder_id_idx',
   'items has index items_user_folder_id_idx'
+);
+
+select has_index(
+  'public',
+  'items',
+  'items_user_normalized_url_uq',
+  'items has index items_user_normalized_url_uq'
 );
 
 select has_index(

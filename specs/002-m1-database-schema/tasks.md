@@ -350,7 +350,7 @@ and 100);`
     - `create unique index folders_user_name_uq on public.folders (user_id, lower(name));`, and
       the same for `tags_user_name_uq`.
   - Append `has_index` for both unique indexes to `tests/010-schema.test.sql`.
-- [ ] T012 [US2] Item rules: append to `tests/050-items.test.sql`, then migration `item_rules`.
+- [x] T012 [US2] Item rules: append to `tests/050-items.test.sql`, then migration `item_rules`.
   - **Tests**:
     - Duplicate URL:
       - A saving a second item with the same `normalized_url` → `23505`.
