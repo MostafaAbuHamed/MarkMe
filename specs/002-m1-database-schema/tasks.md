@@ -303,7 +303,7 @@ embed_provider, embed_id, folder_id, note, preview_status, preview_fetched_at)`.
     - `item_tags`: select, insert (`with check`) and delete policies, each requiring
       `exists (select 1 from public.items i where i.id = item_id and i.user_id = (select
 auth.uid()))` **and** the same for `public.tags`. No update policy.
-- [ ] T010 [US1] Schema guard test `tests/010-schema.test.sql` (no migration):
+- [x] T010 [US1] Schema guard test `tests/010-schema.test.sql` (no migration):
   - `has_table` for the five tables, and `columns_are` for each, matching data-model.md.
   - Every table has RLS on: assert `relrowsecurity` from `pg_class`.
   - `table_privs_are` for `anon` (none) and for `authenticated`, per table, as in access matrix
