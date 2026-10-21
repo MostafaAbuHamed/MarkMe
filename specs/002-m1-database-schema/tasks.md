@@ -184,7 +184,7 @@ tests prove that nobody but the owner can read, change, delete or link anything.
 from [data-model.md](data-model.md). Name checks, length and format checks, unique names and
 URLs, and the `updated_at` trigger are **not** added here. They come in US2.
 
-- [ ] T007 [US1] Profiles: test `tests/020-profiles.test.sql`, then migration `profiles`.
+- [x] T007 [US1] Profiles: test `tests/020-profiles.test.sql`, then migration `profiles`.
   - **Tests**:
     - Sign-up creates a profile:
       - A gets `display_name = 'Alice A'`.
