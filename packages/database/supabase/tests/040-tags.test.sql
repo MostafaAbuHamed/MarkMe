@@ -1,6 +1,6 @@
 begin;
 \ir helpers/identity.psql
-select plan(18);
+select plan(26);
 
 -- A inserts with only name.
 select pg_temp.authenticate_as(pg_temp.user_a());
@@ -143,6 +143,60 @@ select throws_ok(
   '42501',
   null,
   'truncate tags as authenticated is denied'
+);
+
+-- Name rules: case-insensitive uniqueness per user, and trimmed length 1–100.
+
+select lives_ok(
+  $$insert into public.tags (name) values ('Reading')$$,
+  'A creates a tag named Reading'
+);
+
+select throws_ok(
+  $$insert into public.tags (name) values ('reading')$$,
+  '23505',
+  null,
+  'A creating a case-insensitive duplicate tag name is denied'
+);
+
+select throws_ok(
+  $$update public.tags set name = 'READING' where name = 'Renamed'$$,
+  '23505',
+  null,
+  'A renaming another tag to READING is denied'
+);
+
+select pg_temp.authenticate_as(pg_temp.user_b());
+
+select lives_ok(
+  $$insert into public.tags (name) values ('Reading')$$,
+  'B creates a tag named Reading'
+);
+
+select throws_ok(
+  $$insert into public.tags (name) values ('')$$,
+  '23514',
+  null,
+  'an empty tag name is denied'
+);
+
+select throws_ok(
+  $$insert into public.tags (name) values ('   ')$$,
+  '23514',
+  null,
+  'a whitespace-only tag name is denied'
+);
+
+select throws_ok(
+  $$insert into public.tags (name) values (repeat('a', 101))$$,
+  '23514',
+  null,
+  'a 101-character tag name is denied'
+);
+
+select lives_ok(
+  $$insert into public.tags (name) values (repeat('a', 100))$$,
+  'a tag name of exactly 100 characters succeeds'
 );
 
 select * from finish();

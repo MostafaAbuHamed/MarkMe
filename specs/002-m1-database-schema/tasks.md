@@ -337,7 +337,7 @@ least one assertion in `030`–`060`.
 
 **Branch**: `m1/us2-product-rules` from `002-m1-database-schema` after PR 1 merged.
 
-- [ ] T011 [US2] Name rules: append to `tests/030-folders.test.sql` and
+- [x] T011 [US2] Name rules: append to `tests/030-folders.test.sql` and
       `tests/040-tags.test.sql`, then migration `name_rules`.
   - **Tests**, for both folders and tags:
     - A creates "Reading". A creating "reading" → `23505`. A renaming another row to "READING"
