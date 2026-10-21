@@ -225,7 +225,7 @@ nullif(split_part(new.email, '@', 1), '')), 100))`.
 authenticated;`
     - `create trigger on_auth_user_created after insert on auth.users for each row execute
 function private.handle_new_user();`
-- [ ] T008 [US1] Folders and tags: tests `tests/030-folders.test.sql` and
+- [x] T008 [US1] Folders and tags: tests `tests/030-folders.test.sql` and
       `tests/040-tags.test.sql`, then migration `folders_tags`.
   - **Tests**, the same set in each file for its table, A against B:
     - A inserts with only `name`. `user_id` equals A's id and `id`/`created_at` are filled.
