@@ -251,7 +251,7 @@ cascade`.
       - `select` and `delete` stay table-wide, filtered by RLS.
     - Enable RLS. Add four policies `to authenticated` (select, insert `with check`, update
       `using` + `with check`, delete), each with `user_id = (select auth.uid())`.
-- [ ] T009 [US1] Items and links: tests `tests/050-items.test.sql` and
+- [x] T009 [US1] Items and links: tests `tests/050-items.test.sql` and
       `tests/060-item-tags.test.sql`, then migration `items`.
   - **Tests in `050`**:
     - A inserts an item with `url` and `normalized_url` only. Owner, id, timestamps and
