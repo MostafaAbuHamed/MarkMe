@@ -3,9 +3,9 @@
 |        |                                                                                                      |
 | ------ | ---------------------------------------------------------------------------------------------------- |
 | Owner  | Mostafa                                                                                              |
-| Status | Draft v1.3                                                                                           |
+| Status | Draft v1.5                                                                                           |
 | Date   | 2026-10-17                                                                                           |
-| Inputs | [PRD.md](PRD.md), [PLAN.md](PLAN.md) v1.1, [constitution](../.specify/memory/constitution.md) v1.1.1 |
+| Inputs | [PRD.md](PRD.md), [PLAN.md](PLAN.md) v1.1, [constitution](../.specify/memory/constitution.md) v1.1.2 |
 
 ## 0. How to use this document
 
@@ -370,18 +370,23 @@ CI is green, with one passing unit test and one passing pgTAP test.
 **Technical design: migrations** (one file per concern, in order)
 
 1. `…_extensions_and_types.sql`
-   - `create extension if not exists pgtap with schema extensions;` (tests only; Supabase ships it).
+   - No `create extension pgtap`: `supabase test db` enables it, and production should not carry it
+     (M1 plan R8).
+   - `create schema private;` with `revoke all on schema private from public, anon, authenticated`.
+     It is not in `[api].schemas`, and it holds every function a client must not call (M1 plan R4).
    - `create type public.media_type as enum ('article','video','image','post','link');`
    - `create type public.preview_status as enum ('pending','ok','failed');`
    - `create type public.embed_provider as enum ('youtube');` **(approved, A19)**. A new provider
      is `alter type … add value` plus one branch in the `embed_id` check.
-   - A shared `public.set_updated_at()` trigger function.
+   - A shared `private.set_updated_at()` trigger function.
 
 2. `…_profiles.sql`
-   - `profiles(id uuid primary key references auth.users on delete cascade, display_name text, created_at timestamptz not null default now())`.
-   - `public.handle_new_user()`: `security definer`, `set search_path = ''`. It inserts
-     `(new.id, new.raw_user_meta_data->>'full_name')` or the email local part. It runs from an
-     `after insert on auth.users` trigger.
+   - `profiles(id uuid primary key references auth.users on delete cascade, display_name text check (char_length(display_name) <= 100), created_at timestamptz not null default now())`.
+     The cap and an `update (display_name)`-only grant are **(proposed, M1 plan R3; pending
+     approval)**.
+   - `private.handle_new_user()`: `security definer`, `set search_path = ''`. It inserts
+     `(new.id, left(full_name or email local part, 100))` from `new.raw_user_meta_data->>'full_name'`
+     and `new.email`. It runs from an `after insert on auth.users` trigger.
 
 3. `…_folders_tags.sql`
    - `folders(id uuid pk default gen_random_uuid(), user_id uuid not null default auth.uid() references auth.users on delete cascade, name text not null check (length(btrim(name)) between 1 and 100), created_at timestamptz not null default now(), unique (id, user_id))`.
@@ -427,7 +432,8 @@ CI is green, with one passing unit test and one passing pgTAP test.
      - `items (user_id, folder_id)`.
      - `item_tags (tag_id)`.
      - `gin (search_vector)`.
-   - `updated_at` trigger on `items`.
+   - `updated_at` trigger on `items`: `before update of <the A15 update allowlist>`, so a
+     search-data refresh does not bump it (M1 plan R6).
 
 5. `…_rls.sql`
    - `alter table … enable row level security` on all five tables.
@@ -453,6 +459,15 @@ CI is green, with one passing unit test and one passing pgTAP test.
      - `folders`, `tags`: insert and update `name` only.
      - Never granted: `id`, `user_id`, `created_at`, `updated_at`, `search_vector`. An insert
        that names `user_id` fails with _permission denied_ before RLS is reached.
+   - **Supabase default grants (M1 plan R2).** New `public` tables grant everything, TRUNCATE
+     included, to `anon` and `authenticated`. New functions grant EXECUTE to them and to
+     `PUBLIC`. Each migration therefore:
+     - revokes all from `anon` on every table;
+     - revokes `truncate, references, trigger` from `authenticated`;
+     - revokes EXECUTE from `public, anon, authenticated` on every function, then grants it on
+       `search_items` to `authenticated`.
+
+     `010-schema` asserts the final privileges.
 
 6. `…_search.sql`
    - **FTS approach: trigger-maintained `search_vector`.** It is chosen over a search-time join so
@@ -466,16 +481,21 @@ CI is green, with one passing unit test and one passing pgTAP test.
      setweight(to_tsvector('simple', coalesce(description,'')), 'C') ||
      setweight(to_tsvector('simple', regexp_replace(url, '[/:.?=&_-]+', ' ', 'g')), 'D')
      ```
-     Config `simple` (approved, A4).
+     Config `simple` (approved, A4). It lives in `private` as
+     `private.item_search_vector(p_item_id, p_title, p_description, p_note, p_url)`.
+   - The trigger functions are `security definer`, `set search_path = ''`, in `private`.
+     `authenticated` has no UPDATE on `search_vector` and no USAGE on `private`, so they could not
+     refresh the vector otherwise (M1 plan R5).
    - Triggers:
      - `before insert or update of title, description, note, url on items` sets
        `new.search_vector`, computing from `new.*` plus current tags.
      - `after insert or delete on item_tags` updates the affected item.
      - `after update of name on tags` updates all items with that tag.
    - `public.search_items(p_query text default null, p_folder_id uuid default null, p_no_folder boolean default false, p_tag_ids uuid[] default null, p_limit int default 20, p_offset int default 0)`:
-     - Returns `setof` a composite with item columns, `tags jsonb` (`[{id,name}]`) and
-       `rank real`.
-     - `language sql stable security invoker`, so **RLS applies**.
+     - `returns table` with the item columns (no `search_vector` or `user_id`), `tags jsonb`
+       (`[{id,name}]`) and `rank real`.
+     - `language plpgsql stable security invoker set search_path = ''`, so **RLS applies**.
+       It is plpgsql so the A13 rule can `raise` (SQLSTATE `22023`) (M1 plan R7).
      - Filters:
        - `p_query` matches **word prefixes (approved, A14)**: the input goes through
          `to_tsvector('simple', p_query)`, each resulting lexeme becomes `lexeme:*`, and the terms
@@ -489,12 +509,13 @@ CI is green, with one passing unit test and one passing pgTAP test.
          error.
        - Tags: an item must have **all** of `p_tag_ids` (`having count(distinct tag_id) = cardinality(p_tag_ids)`)
          (approved, A3).
-     - Order: with a query, `ts_rank_cd(search_vector, q) desc, created_at desc`. Without one,
-       `created_at desc, id desc`.
+     - Order: with a query, `ts_rank_cd(search_vector, q) desc, created_at desc, id desc`. Without
+       one, `created_at desc, id desc`.
      - The ALL-tags filter is evaluated after the GIN match (group/having). This is fine at v1 scale
        and is measured by `perf-search` in M6.
      - Offset pagination is acceptable at 10k items per user. Keyset is a later optimization.
-     - `p_limit` is clamped to 1–50.
+     - `p_limit` is clamped to 1–50 and `p_offset` to ≥ 0. An empty `p_tag_ids` means no tag
+       filter, and duplicate ids are ignored.
 
 **Types**
 
@@ -513,13 +534,17 @@ CI is green, with one passing unit test and one passing pgTAP test.
   - The same project serves production and the S0 Q1/Q2 manual run. No separate staging project
     (the free tier allows two projects; one is enough for v1).
   - Free projects pause after 7 days without activity; acceptable during development.
-- `supabase link --project-ref … --workdir packages/database`, then `pnpm db:push`.
+- `supabase link --project-ref … --workdir packages/database`, then `pnpm db:push` (a new root
+  script: `supabase db push --workdir packages/database`). The ref stays in git-ignored
+  `supabase/.temp/`.
 - **Decision:** manual push, documented in the README. A CI auto-push needs a stored DB password
   and a production-migration policy, which is not worth it for v1 (constitution IV).
 
 **Tests (pgTAP, `packages/database/supabase/tests/`)**
 
-- Helpers file `001-helpers.test.sql`. Better: a non-test `tests/helpers.sql` included via `\ir`.
+- Helpers: `tests/helpers/identity.psql`, `\ir`-included by each test file. They use `pg_temp`,
+  so nothing persists. A probe run on 2026-10-20 confirmed that a `.psql` file in a subfolder is
+  not run as a test (M1 plan R9).
   - Create two users by inserting into `auth.users`.
   - Switch identity with:
     ```sql
@@ -529,7 +554,7 @@ CI is green, with one passing unit test and one passing pgTAP test.
 
 | File                     | Asserts                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | ------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `010-schema.test.sql`    | tables, columns, enums, indexes exist (`has_table`, `has_column`, `has_index`); RLS enabled on all 5 (`select relrowsecurity`)                                                                                                                                                                                                                                                                                                                                                                                                              |
+| `010-schema.test.sql`    | tables, columns, enums, indexes exist (`has_table`, `has_column`, `has_index`); RLS enabled on all 5 (`select relrowsecurity`); privileges via `table_privs_are`, `column_privs_are`, `function_privs_are`: anon has none, authenticated has only the allowlists, no TRUNCATE, EXECUTE only on `search_items` (R2)                                                                                                                                                                                                                          |
 | `020-profiles.test.sql`  | sign-up trigger creates profile; user A reads own, not B's; cannot insert/delete                                                                                                                                                                                                                                                                                                                                                                                                                                                            |
 | `030-folders.test.sql`   | A CRUD own; A cannot read/update/delete B's; insert naming `user_id` → permission denied (A16); update of anything but `name` → permission denied; case-insensitive duplicate name fails; same name for A and B allowed                                                                                                                                                                                                                                                                                                                     |
 | `040-tags.test.sql`      | same matrix as folders                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
@@ -1384,6 +1409,13 @@ Auth stays.
 
 ## Changelog
 
+- v1.5 (2026-10-20): M1 `/speckit-plan` changes (`specs/002-m1-database-schema/research.md`):
+  - Explicit revokes for Supabase's default grants (anon, TRUNCATE, EXECUTE).
+  - A `private` schema for internal functions, with security-definer vector refresh.
+  - `updated_at` bumped on item edits only.
+  - `search_items` as plpgsql `returns table`.
+  - No pgTAP migration; helpers in `tests/helpers/identity.psql`; a `db:push` script.
+  - A profiles allowlist and name cap, proposed (pending approval).
 - v1.4 (2026-10-20): M1 design review: A13–A20 approved and applied to M1 (search filters and prefix matching, column privileges, length caps, Supabase Cloud project in Frankfurt), M2/M3/M5 (`embed_html` → `embed_provider` + `embed_id`). Clerk considered and rejected.
 - v1.3 (2026-10-18): M0 `/speckit-plan` changes: Node 24, TS 6.0, ESLint 9 kept, Vitest 5, zod 4, Supabase CLI as dev dependency, five CI jobs, gitleaks CLI; M0 open items settled.
 - v1.2 (2026-10-18): §4 decisions approved; S0 results for Q3–Q6 (§2.4) applied to M3/M4 (lockless refresh, no `alarms`, confirm-before-sign-in, tokenless Instagram, `publish.x.com`). Q1/Q2 pending a manual run.
