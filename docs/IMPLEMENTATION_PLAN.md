@@ -382,8 +382,7 @@ CI is green, with one passing unit test and one passing pgTAP test.
 
 2. `…_profiles.sql`
    - `profiles(id uuid primary key references auth.users on delete cascade, display_name text check (char_length(display_name) <= 100), created_at timestamptz not null default now())`.
-     The cap and an `update (display_name)`-only grant are **(proposed, M1 plan R3; pending
-     approval)**.
+     The cap and an `update (display_name)`-only grant are **(approved 2026-10-21, M1 plan R3)**.
    - `private.handle_new_user()`: `security definer`, `set search_path = ''`. It inserts
      `(new.id, left(full_name or email local part, 100))` from `new.raw_user_meta_data->>'full_name'`
      and `new.email`. It runs from an `after insert on auth.users` trigger.
@@ -1415,7 +1414,7 @@ Auth stays.
   - `updated_at` bumped on item edits only.
   - `search_items` as plpgsql `returns table`.
   - No pgTAP migration; helpers in `tests/helpers/identity.psql`; a `db:push` script.
-  - A profiles allowlist and name cap, proposed (pending approval).
+  - A profiles allowlist and name cap (R3), approved 2026-10-21.
 - v1.4 (2026-10-20): M1 design review: A13–A20 approved and applied to M1 (search filters and prefix matching, column privileges, length caps, Supabase Cloud project in Frankfurt), M2/M3/M5 (`embed_html` → `embed_provider` + `embed_id`). Clerk considered and rejected.
 - v1.3 (2026-10-18): M0 `/speckit-plan` changes: Node 24, TS 6.0, ESLint 9 kept, Vitest 5, zod 4, Supabase CLI as dev dependency, five CI jobs, gitleaks CLI; M0 open items settled.
 - v1.2 (2026-10-18): §4 decisions approved; S0 results for Q3–Q6 (§2.4) applied to M3/M4 (lockless refresh, no `alarms`, confirm-before-sign-in, tokenless Instagram, `publish.x.com`). Q1/Q2 pending a manual run.

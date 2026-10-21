@@ -47,7 +47,9 @@ where this plan differs from the implementation plan. Those differences are copi
 privileges … revoke`): it affects objects created later by anyone and is easy to miss in review;
   per-table statements next to each table are clearer.
 
-## R3. Profiles get a column allowlist and a name cap (difference; needs Mostafa's approval)
+## R3. Profiles get a column allowlist and a name cap (difference; approved 2026-10-21)
+
+Mostafa approved this decision on 2026-10-21.
 
 - **Decision**:
   - `profiles`: revoke `insert`, `delete`, `update`, `truncate`, `references`, `trigger` from

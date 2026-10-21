@@ -86,7 +86,7 @@ before any SQL is written.
   - The pending `/docs/IMPLEMENTATION_PLAN.md` changes.
   - Message: `docs(m1): add spec, plan and tasks for M1`.
   - Then create branch `m1/us1-private-collection` from it for T002–T010.
-- [ ] T002 Record Mostafa's approval of research R3 (approved 2026-10-21). R3 makes `profiles` grant
+- [x] T002 Record Mostafa's approval of research R3 (approved 2026-10-21). R3 makes `profiles` grant
       only `update (display_name)`, adds a 100-character `display_name` cap and makes sign-up truncate
       the name.
   - Record the approval in `specs/002-m1-database-schema/research.md` (R3 heading),
@@ -555,7 +555,7 @@ migrations, and the README explains how.
     It needs an `import type { Database }`.
   - Proof: `pnpm typecheck && pnpm lint` pass. Add no other runtime code.
 - [ ] T018 [P] [US4] Root script in `/package.json`: `"db:push": "supabase db push --workdir
-  packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --help` resolves
+packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --help` resolves
       to the CLI. Never add it to CI (A11).
 - [ ] T019 [US4] `/README.md` "Database" section (FR-032; contract database-package "README"):
   - Local: `pnpm db:reset`, `pnpm db:test`.

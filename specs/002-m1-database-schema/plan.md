@@ -106,7 +106,7 @@ that file in this change, per its change rule):
 
 1. `anon` loses all grants. `authenticated` loses TRUNCATE, REFERENCES and TRIGGER. EXECUTE is
    revoked from client roles except on `search_items`. `010` asserts the privileges (R2).
-2. **Needs Mostafa's approval:** `profiles` gets an `update (display_name)` allowlist and a
+2. **Approved 2026-10-21:** `profiles` gets an `update (display_name)` allowlist and a
    100-character cap. The sign-up function truncates the name (R3).
 3. Internal functions move to a non-exposed `private` schema (R4).
 4. The vector-refresh trigger functions are `security definer`, so they work under A15 (R5).
