@@ -973,7 +973,9 @@ Run against both local and the Cloud Run URL.
 - `src/lib/storage-adapter.ts`: `chromeStorageAdapter: AuthStorage` over `browser.storage.local`
   (survives restarts). Keys are namespaced by the supabase-js `storageKey`.
 - `src/lib/supabase.ts`:
-  - Each entrypoint calls `createMarkMeClient({ url, anonKey, storage: chromeStorageAdapter, flowType: 'pkce', detectSessionInUrl: false, autoRefreshToken: true })` with **no `lock` option** (auth-js is lockless since 2.107; S0 Q5)
+  - Each entrypoint calls `createMarkMeClient({ url, anonKey, storage: chromeStorageAdapter })`
+    (M2: the factory fixes PKCE, auto refresh and session persistence, `detectSessionInUrl`
+    defaults to `false`, and there is **no `lock` option**; auth-js is lockless since 2.107, S0 Q5)
     once **per surface** (module scope of that entrypoint; not shared across surfaces).
   - Surfaces subscribe to `browser.storage.onChanged` to call `supabase.auth.getSession()` and
     re-render when another surface signs in or out.
@@ -1110,8 +1112,11 @@ Manual checklist: Google sign-in works; Chrome restart keeps the session; sign o
     - Prefill the URL field.
     - The **Save** button is enabled as soon as the URL is known. Folder and tag lists load in
       parallel and never block the button.
-  - The paste field validates with `normalizeUrl`. Non-http(s) URLs (`chrome://`, `file://`) show
-    "This page can't be saved".
+  - The paste field validates with `parseUserUrl` (A22), so `example.com/post` is accepted; the
+    current-tab prefill uses `normalizeUrl`. Error codes (A21) map to messages: `invalid` → "Enter
+    a valid link"; `unsupported_scheme` (`chrome://`, `file://`) → "This page can't be saved";
+    `has_credentials` → "Links with a username or password can't be saved"; `too_long` → "This
+    link is too long".
   - `FolderSelect` (from the `folders` query), `TagInput` (combobox with autocomplete over `tags`;
     Enter/comma creates a chip; keyboard and ARIA combobox pattern), `NoteField` with a 1000-char
     counter.
