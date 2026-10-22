@@ -71,13 +71,14 @@ export function normalizeUrl(input: string): NormalizeResult {
     return { ok: false, error: "has_credentials" };
   }
 
-  const path = url.pathname.replace(/\/+$/, "");
-  const query = normalizeQuery(url.search, url.hostname);
-  const normalizedUrl = protocol + "//" + url.host + path + (query ? "?" + query : "");
-
+  // normalizedUrl only removes parts of href, so this one check caps both outputs.
   if (url.href.length > MAX_URL_LENGTH) {
     return { ok: false, error: "too_long" };
   }
+
+  const path = url.pathname.replace(/\/+$/, "");
+  const query = normalizeQuery(url.search, url.hostname);
+  const normalizedUrl = protocol + "//" + url.host + path + (query ? "?" + query : "");
 
   return { ok: true, url: url.href, normalizedUrl };
 }

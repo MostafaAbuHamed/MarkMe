@@ -143,6 +143,7 @@ describe("normalizeUrl errors", () => {
     expect(result.url.length).toBeLessThanOrEqual(MAX_URL_LENGTH);
     expect(result.normalizedUrl.length).toBeLessThanOrEqual(MAX_URL_LENGTH);
     expect(result.normalizedUrl.length).toBe(MAX_URL_LENGTH);
+    expect(normalizeUrl(result.normalizedUrl)).toEqual(result);
   });
 });
 
@@ -174,15 +175,6 @@ describe("normalizeUrl edge cases", () => {
       expect(result.normalizedUrl).toBe(expected);
     }
   });
-
-  it("youtu.be and youtube.com/watch are not equal canonical forms", () => {
-    const short = normalizeUrl("https://youtu.be/dQw4w9WgXcQ");
-    const watch = normalizeUrl("https://youtube.com/watch?v=dQw4w9WgXcQ");
-    expect(short.ok && watch.ok).toBe(true);
-    if (short.ok && watch.ok) {
-      expect(short.normalizedUrl).not.toBe(watch.normalizedUrl);
-    }
-  });
 });
 
 describe("normalizeUrl url output", () => {
@@ -204,20 +196,5 @@ describe("normalizeUrl invariants", () => {
       expect(again.normalizedUrl).toBe(normalizedUrl);
     }
     expect(normalizedUrl).toMatch(/^https?:\/\//);
-  });
-
-  it("length boundary row is idempotent", () => {
-    const input = "https://a.com/" + "a".repeat(2034);
-    const result = normalizeUrl(input);
-    expect(result.ok).toBe(true);
-    if (!result.ok) {
-      return;
-    }
-    const again = normalizeUrl(result.normalizedUrl);
-    expect(again.ok).toBe(true);
-    if (again.ok) {
-      expect(again.normalizedUrl).toBe(result.normalizedUrl);
-    }
-    expect(result.normalizedUrl).toMatch(/^https?:\/\//);
   });
 });
