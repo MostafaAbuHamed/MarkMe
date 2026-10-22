@@ -1,6 +1,6 @@
 begin;
 \ir helpers/identity.psql
-select plan(18);
+select plan(32);
 
 -- A inserts with only name.
 select pg_temp.authenticate_as(pg_temp.user_a());
@@ -143,6 +143,125 @@ select throws_ok(
   '42501',
   null,
   'truncate tags as authenticated is denied'
+);
+
+-- Name rules: case-insensitive uniqueness per user, and trimmed length 1–100.
+
+select lives_ok(
+  $$insert into public.tags (name) values ('Reading')$$,
+  'A creates a tag named Reading'
+);
+
+select throws_ok(
+  $$insert into public.tags (name) values ('reading')$$,
+  '23505',
+  null,
+  'A creating a case-insensitive duplicate tag name is denied'
+);
+
+select throws_ok(
+  $$update public.tags set name = 'READING' where name = 'Renamed'$$,
+  '23505',
+  null,
+  'A renaming another tag to READING is denied'
+);
+
+select pg_temp.authenticate_as(pg_temp.user_b());
+
+select lives_ok(
+  $$insert into public.tags (name) values ('Reading')$$,
+  'B creates a tag named Reading'
+);
+
+select throws_ok(
+  $$insert into public.tags (name) values ('')$$,
+  '23514',
+  null,
+  'an empty tag name is denied'
+);
+
+select throws_ok(
+  $$insert into public.tags (name) values ('   ')$$,
+  '23514',
+  null,
+  'a whitespace-only tag name is denied'
+);
+
+select throws_ok(
+  $$insert into public.tags (name) values (repeat('a', 101))$$,
+  '23514',
+  null,
+  'a 101-character tag name is denied'
+);
+
+select lives_ok(
+  $$insert into public.tags (name) values (repeat('a', 100))$$,
+  'a tag name of exactly 100 characters succeeds'
+);
+
+-- FR-018: deleting a tag removes its links and leaves the items.
+
+select pg_temp.authenticate_as(pg_temp.user_a());
+
+select lives_ok(
+  $$insert into public.tags (name) values ('To delete')$$,
+  'A creates a tag linked to items'
+);
+
+select lives_ok(
+  $$insert into public.items (url, normalized_url)
+    values
+      ('https://example.com/tag-item-1', 'https://example.com/tag-item-1'),
+      ('https://example.com/tag-item-2', 'https://example.com/tag-item-2')$$,
+  'A creates two items for the tag'
+);
+
+select lives_ok(
+  $$insert into public.item_tags (item_id, tag_id)
+    select i.id, t.id
+    from public.items as i
+    cross join public.tags as t
+    where i.url in (
+      'https://example.com/tag-item-1',
+      'https://example.com/tag-item-2'
+    )
+      and t.name = 'To delete'$$,
+  'A links the tag to both items'
+);
+
+select lives_ok(
+  $$delete from public.tags where name = 'To delete'$$,
+  'A deletes the tag linked to two items'
+);
+
+select is(
+  (
+    select count(*)
+    from public.item_tags
+    where item_id in (
+      select id
+      from public.items
+      where url in (
+        'https://example.com/tag-item-1',
+        'https://example.com/tag-item-2'
+      )
+    )
+  ),
+  0::bigint,
+  'the tag''s item_tags rows are gone'
+);
+
+select is(
+  (
+    select count(*)
+    from public.items
+    where url in (
+      'https://example.com/tag-item-1',
+      'https://example.com/tag-item-2'
+    )
+  ),
+  2::bigint,
+  'both items still exist after the tag delete'
 );
 
 select * from finish();

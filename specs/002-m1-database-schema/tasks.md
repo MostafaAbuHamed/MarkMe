@@ -337,7 +337,7 @@ least one assertion in `030`–`060`.
 
 **Branch**: `m1/us2-product-rules` from `002-m1-database-schema` after PR 1 merged.
 
-- [ ] T011 [US2] Name rules: append to `tests/030-folders.test.sql` and
+- [x] T011 [US2] Name rules: append to `tests/030-folders.test.sql` and
       `tests/040-tags.test.sql`, then migration `name_rules`.
   - **Tests**, for both folders and tags:
     - A creates "Reading". A creating "reading" → `23505`. A renaming another row to "READING"
@@ -350,7 +350,7 @@ and 100);`
     - `create unique index folders_user_name_uq on public.folders (user_id, lower(name));`, and
       the same for `tags_user_name_uq`.
   - Append `has_index` for both unique indexes to `tests/010-schema.test.sql`.
-- [ ] T012 [US2] Item rules: append to `tests/050-items.test.sql`, then migration `item_rules`.
+- [x] T012 [US2] Item rules: append to `tests/050-items.test.sql`, then migration `item_rules`.
   - **Tests**:
     - Duplicate URL:
       - A saving a second item with the same `normalized_url` → `23505`.
@@ -385,7 +385,7 @@ char_length(normalized_url) <= 2048)`. The database never re-normalizes (A17).
 '^[A-Za-z0-9_-]{11}$')`
   - Append `has_index` (or `col_is_unique`) for `items_user_normalized_url_uq` to
     `tests/010-schema.test.sql`.
-- [ ] T013 [US2] `updated_at`: append to `tests/050-items.test.sql`, then migration
+- [x] T013 [US2] `updated_at`: append to `tests/050-items.test.sql`, then migration
       `items_updated_at` (R6).
   - **Tests**:
     - `now()` is fixed inside the test transaction. So first, as `postgres`, set the item's
@@ -405,7 +405,7 @@ private.set_updated_at();`
     - The column list must equal the T009 update grant. Add a SQL comment that says so.
   - Append `function_privs_are` for `private.set_updated_at()` (no client execute) to
     `tests/010-schema.test.sql`.
-- [ ] T014 [US2] Delete effects (FR-018, FR-019; tests only, the FKs come from T009):
+- [x] T014 [US2] Delete effects (FR-018, FR-019; tests only, the FKs come from T009):
   - In `tests/030-folders.test.sql`: A deletes a folder holding 2 items. Both items still exist
     with `folder_id is null`.
   - In `tests/040-tags.test.sql`: A deletes a tag linked to 2 items. Its `item_tags` rows are
