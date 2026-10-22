@@ -13,6 +13,15 @@ functions (triggers, search-vector helpers) live in the `private` schema, closed
 `authenticated`. `@markme/database` exports the generated types plus `SearchItemRow`. No app uses
 them yet.
 
+M2 (domain package) is implemented. `@markme/domain` exports the URL rules (`normalizeUrl`,
+`parseUserUrl`, `detectProvider`, `extractYouTubeId`, `YOUTUBE_ID_PATTERN`), `detectMediaType`,
+`LIMITS` and the zod schemas (item, folder/tag names, preview request/response/error, enums
+built from `@markme/database` `Constants`). The Supabase client factory `createMarkMeClient`
+is only at `@markme/domain/client`; a lint rule keeps `supabase-js` out of the rules entry.
+The domain `test` script runs coverage and fails below 100% lines/branches on `src/url/**`
+(the text table hides fully covered files); focused runs:
+`pnpm --filter @markme/domain exec vitest run <file>`. No app uses the exports yet.
+
 Hosted Supabase project `markme` (free, `eu-central-1`) runs the same migrations. `pnpm db:push` is
 the manual production step after a migration PR merges (needs `supabase link` once; the ref lives in
 git-ignored `packages/database/supabase/.temp/`); never in CI.
