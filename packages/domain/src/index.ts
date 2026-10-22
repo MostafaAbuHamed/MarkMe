@@ -14,3 +14,4 @@ export {
   extractYouTubeId,
   type Provider,
 } from "./url/provider";
+export { detectMediaType, type MediaType } from "./media-type";
