@@ -3,7 +3,7 @@
 |        |                                                                                        |
 | ------ | -------------------------------------------------------------------------------------- |
 | Owner  | Mostafa                                                                                |
-| Status | Draft v1.2                                                                             |
+| Status | Draft v1.4                                                                             |
 | Date   | 2026-10-17                                                                             |
 | Input  | [PRD.md](PRD.md) (approved), [constitution](../.specify/memory/constitution.md) v1.1.1 |
 | Detail | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): technical design per milestone       |
@@ -12,7 +12,7 @@
 
 - Each milestone below is **one Spec Kit feature**: `/speckit-specify` -> `/speckit-clarify` -> `/speckit-plan` -> `/speckit-tasks` -> `/speckit-analyze` -> `/speckit-implement`.
 - Claude (PM) writes the `/speckit-specify` input for each milestone; Mostafa runs it on his machine with Claude Code + Cursor, delegation and review skills.
-- One branch per milestone. Each Spec Kit task gets one commit and one PR into the milestone branch, with CI green. The milestone branch merges to `main` only when its exit criteria pass in CI.
+- One branch per milestone. Each Spec Kit task gets one commit; each user story (a group of connected tasks) gets one PR into the milestone branch, with CI green. The milestone branch merges to `main` only when its exit criteria pass in CI.
 - UI milestones use the **frontend-design** and **impeccable** skills.
 - Milestones run in order; a milestone starts only after its dependencies are merged.
 - The constitution (v1.1.1) is ratified and binding. Change it only through its Governance section.
@@ -163,6 +163,7 @@ M3 needs JWT verification, not the schema; if it helps, it can depend on M0 + M2
 ### Later
 
 - Public sharing of items and collections.
+- Provider-aware URL merging for duplicates (`youtu.be/ID` = `youtube.com/watch?v=ID`, `twitter.com` = `x.com`, `m.` hosts); not in v1 (IMPLEMENTATION_PLAN A24).
 
 ## 4. Risks to watch during v1
 
@@ -185,6 +186,7 @@ Run the OAuth/oEmbed spike, and write the `/speckit-specify` input for **M0 Mono
 
 ## Changelog
 
+- v1.4 (2026-10-22): one PR per user story (IMPLEMENTATION_PLAN A36); provider-aware URL merging added to Later (A24).
 - v1.3 (2026-10-20): M1 and M3 bullets updated for the M1 design review (IMPLEMENTATION_PLAN §4 A13–A20).
 - v1.2 (2026-10-17): linked IMPLEMENTATION_PLAN.md (technical design, tasks, spike S0 steps).
 - v1.1 (2026-10-17): fixed M1 coverage; added common definition of done, secrets and DB-test CI to M0, early cloud deploys (M1, M3), pre-M4 spike, background-worker preview flow, pinned extension ID, earlier E2E and a11y checks, measurable perf exits, unpacked-only release, new risks.
