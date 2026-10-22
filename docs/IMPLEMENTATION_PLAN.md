@@ -3,7 +3,7 @@
 |        |                                                                                                      |
 | ------ | ---------------------------------------------------------------------------------------------------- |
 | Owner  | Mostafa                                                                                              |
-| Status | Draft v1.6                                                                                           |
+| Status | Draft v1.7                                                                                           |
 | Date   | 2026-10-17                                                                                           |
 | Inputs | [PRD.md](PRD.md), [PLAN.md](PLAN.md) v1.1, [constitution](../.specify/memory/constitution.md) v1.1.2 |
 
@@ -661,6 +661,11 @@ the package uses the real `Database` types from `@markme/database` (new workspac
 - `url` is the trimmed, parsed `href` with tracking params kept: the link "open original" uses.
 - `normalizedUrl` applies every rule below. It is the duplicate key and the preview cache key.
 - Both outputs are capped at 2048 chars; a longer one → `too_long`.
+- Checks run in order parse → scheme → credentials → length; the first failure is returned. A
+  username alone counts as credentials.
+- `normalizedUrl` is built from the parsed parts (`protocol//host` + path + query), never by
+  editing `href`. Stripping every trailing slash (rule 9, not just one) keeps the normalizer
+  idempotent: `https://a.com//` → `https://a.com`.
 
 | #   | Rule                                                                             | Example in → out                                                                              |
 | --- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
@@ -672,7 +677,7 @@ the package uses the real `Database` types from `@markme/database` (new workspac
 | 6   | Strip tracking params, key matched case-insensitively **(approved, A23)**        | `?utm_source=x&id=2` → `?id=2`; `?IGSH=abc` → no query                                        |
 | 7   | Drop an empty query                                                              | `https://a.com/x?` / all params stripped → no `?`                                             |
 | 8   | Keep remaining params byte for byte: order, values, encoding **(approved, A25)** | `?b=2&a=1` stays; `?q=a+b&r=%20` stays                                                        |
-| 9   | Remove trailing slash on path; root has no slash in output                       | `https://a.com/x/` → `https://a.com/x`; `https://a.com/` → `https://a.com` **(approved, A5)** |
+| 9   | Remove every trailing slash on path; root has no slash in output                 | `https://a.com/x/` → `https://a.com/x`; `https://a.com/` → `https://a.com` **(approved, A5)** |
 | 10  | Reject URLs with credentials                                                     | `https://u:p@a.com` → `has_credentials` **(approved, A5, A21)**                               |
 
 Tracking params (A23):
@@ -685,8 +690,9 @@ Tracking params (A23):
   later change lets some duplicates through.
 
 Query handling (A25): split the raw query on `&`, drop pairs whose key is on the list, join the
-rest unchanged. `URLSearchParams` is not used to write the query, because it re-serializes every
-pair (`%20` → `+`). Percent-encoding is not normalized (`%2f` ≠ `%2F`).
+rest unchanged. Empty segments (`&&`, leading or trailing `&`) are dropped too. Keys are matched
+as written, not percent-decoded. `URLSearchParams` is not used to write the query, because it
+re-serializes every pair (`%20` → `+`). Percent-encoding is not normalized (`%2f` ≠ `%2F`).
 
 Not merged in v1 **(approved, A24)**: `www.` is kept; provider aliases (`youtu.be/ID` vs
 `youtube.com/watch?v=ID`, `twitter.com` vs `x.com`, `m.` hosts) stay distinct URLs. Provider-aware
@@ -728,8 +734,9 @@ The popup's "save current tab" calls `normalizeUrl` directly.
 - `detectProvider(url): 'youtube' | 'x' | 'instagram' | null`:
   - YouTube: `youtube.com`, `www.`, `m.`, `music.`, `youtu.be`; paths `/watch`, `/shorts/`,
     `/embed/`, `/live/`.
-  - X: `x.com`, `twitter.com`, `mobile.` hosts.
-  - Instagram: `instagram.com` paths `/p/`, `/reel/`, `/tv/`.
+  - X: `x.com`, `twitter.com`, and their `www.` and `mobile.` hosts.
+  - Instagram: `instagram.com`, `www.instagram.com` paths `/p/`, `/reel/`, `/tv/` (Instagram's
+    share links use `www.`).
 - `extractYouTubeId(url): string | null`, checked against the exported `YOUTUBE_ID_PATTERN`
   (`^[A-Za-z0-9_-]{11}$`), the same rule as the M1 check (A19).
 - M3 adapters call `detectProvider`; M6 builds the iframe from the id.
@@ -753,7 +760,8 @@ The popup's "save current tab" calls `normalizeUrl` directly.
 - Enums **(approved, A34)**: `mediaType`, `previewStatus`, `embedProvider` are built from
   `Constants.public.Enums` in `@markme/database`, never copied.
 - `httpUrl` **(approved, A33)**: a schema built on `normalizeUrl`; it fails with the normalizer's
-  error code and outputs `{ url, normalizedUrl }`. Used by `itemCreate` and `previewRequest`.
+  error code (zod `custom` issue, code in `params.code`, read with `urlErrorCode`) and outputs
+  `{ url, normalizedUrl }`. Used by `itemCreate` and `previewRequest`.
 - `note` = trimmed, max 1000; empty after trim → `null` **(approved, A29)**.
 - `folderName` / `tagName` = trimmed, 1–100 chars. Tag names also collapse inner whitespace to one
   space and may not contain commas, because the tag input splits on them **(approved, A28)**.
@@ -767,6 +775,7 @@ The popup's "save current tab" calls `normalizeUrl` directly.
 - `previewRequest` = `{ url: httpUrl, force?: boolean }`.
 - `previewResponse` = `{ url, title?, description?, imageUrl?, faviconUrl?, siteName?, mediaType, embed?: { provider: 'youtube', id }, provider? }`.
   - `embed.id` must match `YOUTUBE_ID_PATTERN`.
+  - `url`, `imageUrl`, `faviconUrl` must pass `normalizeUrl` and are kept as given.
   - String lengths come from `LIMITS`.
   - The preview API and the client both parse with it.
 - `previewError` = `{ error: 'invalid_url' | 'unauthorized' | 'blocked_target' | 'rate_limited' | 'fetch_failed' | 'timeout' }`
@@ -776,6 +785,8 @@ The popup's "save current tab" calls `normalizeUrl` directly.
 `src/client/factory.ts`, exported only from the subpath `@markme/domain/client`, so importing
 `@markme/domain` never loads `supabase-js` (the preview API only needs the rules)
 **(approved, A31)**. New dependency `@supabase/supabase-js` ≥ 2.107 (S0 Q5: lockless refresh).
+An ESLint `no-restricted-imports` override bans `supabase-js` outside `src/client/`. The domain
+tsconfig adds the `DOM` lib for `URL` types (code runs in the browser and Node 24).
 
 ```ts
 export interface AuthStorage {
@@ -1570,6 +1581,10 @@ They settle the M2 open items (root slash, credentials, max tags, `www.`).
 
 ## Changelog
 
+- v1.7 (2026-10-22): M2 `/speckit-plan` changes (`specs/003-m2-domain-package/research.md`):
+  every trailing slash stripped (idempotent key); empty query segments dropped; fixed error order;
+  `www.` Instagram/X hosts; `httpUrl` error in `params.code`; preview link fields checked by the
+  normalizer; `DOM` lib and a `supabase-js` import guard in `packages/domain`.
 - v1.6 (2026-10-21): M1 story-grouped migrations (`specs/002-m1-database-schema/tasks.md` T003):
   nine migrations (`extensions_and_types`, `profiles`, `folders_tags`, `items`, `name_rules`,
   `item_rules`, `items_updated_at`, `search_vector`, `search_items`) instead of five monolithic
