@@ -7,3 +7,4 @@ export {
   type NormalizeError,
   type NormalizeResult,
 } from "./url/normalize";
+export { parseUserUrl } from "./url/parse-user-url";
