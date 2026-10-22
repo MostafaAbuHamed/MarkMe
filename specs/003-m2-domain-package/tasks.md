@@ -73,7 +73,7 @@ Rules for all tasks:
 
 **Purpose**: put the milestone branch on GitHub so story PRs can target it.
 
-- [ ] T001 Commit this task list and publish the milestone branch.
+- [x] T001 Commit this task list and publish the milestone branch.
   - **Files**: `specs/003-m2-domain-package/tasks.md`, `specs/003-m2-domain-package/research.md`
     (the R4 and R11 edits made with this task list).
   - **Steps**:
@@ -91,7 +91,7 @@ Rules for all tasks:
 
 **Purpose**: the coverage gate and the `URL` typings that every later task relies on.
 
-- [ ] T002 Add the coverage gate and the DOM lib (R10, R12).
+- [x] T002 Add the coverage gate and the DOM lib (R10, R12).
   - **Files**: `package.json`, `vitest.config.ts`, `tsconfig.json`, `/pnpm-lock.yaml`.
   - **Implement**:
     - `pnpm --filter @markme/domain add -D -E @vitest/coverage-v8@5.0.5`. It must equal the
@@ -122,7 +122,7 @@ key, or one error code (FR-001–FR-005).
 tables pass, and `src/url/normalize.ts` and `src/url/parse-user-url.ts` show 100% lines and
 branches.
 
-- [ ] T003 [US1] Implement `normalizeUrl` (A5, A21, A23–A25; R1–R4).
+- [x] T003 [US1] Implement `normalizeUrl` (A5, A21, A23–A25; R1–R4).
   - **Files**: `src/url/normalize.ts`, `src/url/normalize.test.ts`, `src/index.ts`.
   - **Test first** (`src/url/normalize.test.ts`). Five tables, then one invariant:
     1. **Rule table**, input → `normalizedUrl`:
@@ -207,7 +207,7 @@ MAX_URL_LENGTH` → `too_long` (R4; one check caps both).
     `typecheck` pass.
   - **Commit**: `feat(domain): add normalizeUrl with tracking and edge-case tables (T003)`.
 
-- [ ] T004 [US1] Implement `parseUserUrl` for the paste field (A22).
+- [x] T004 [US1] Implement `parseUserUrl` for the paste field (A22).
   - **Files**: `src/url/parse-user-url.ts`, `src/url/parse-user-url.test.ts`, `src/index.ts`.
   - **Test first** (`src/url/parse-user-url.test.ts`), input → result:
     - **Step 1, scheme present** (normalized as written):
@@ -253,7 +253,7 @@ pass, and `src/url/provider.ts` shows 100%.
 
 Branch: `m2/us2-link-classification`, from `003-m2-domain-package` after PR 1 merges.
 
-- [ ] T005 [US2] Implement `detectProvider`, `extractYouTubeId` and `YOUTUBE_ID_PATTERN` (A19,
+- [x] T005 [US2] Implement `detectProvider`, `extractYouTubeId` and `YOUTUBE_ID_PATTERN` (A19,
       A26; R5, R6).
   - **Files**: `src/url/provider.ts`, `src/url/provider.test.ts`, `src/index.ts`.
   - **Test first** (`src/url/provider.test.ts`). Use the valid id `dQw4w9WgXcQ`:
@@ -289,7 +289,7 @@ Branch: `m2/us2-link-classification`, from `003-m2-domain-package` after PR 1 me
   - **Done when**: `test` passes with `provider.ts` at 100%; `lint` and `typecheck` pass.
   - **Commit**: `feat(domain): add provider detection and YouTube id rule (T005)`.
 
-- [ ] T006 [US2] Implement `detectMediaType` (A27; R7) and add the `@markme/database` dependency
+- [x] T006 [US2] Implement `detectMediaType` (A27; R7) and add the `@markme/database` dependency
       (R9).
   - **Files**: `package.json`, `/pnpm-lock.yaml`, `src/media-type.ts`, `src/media-type.test.ts`,
     `src/index.ts`.
@@ -357,7 +357,7 @@ success, `data` with `toEqual`. Real v4 uuids for fixtures:
 distinct ids, generate them in the test with `crypto.randomUUID()`. For 21 distinct tag names,
 use `Array.from({ length: 21 }, (_, i) => "t" + i)`.
 
-- [ ] T007 [US3] Add `LIMITS` and the database enums (A30, A34; R9).
+- [x] T007 [US3] Add `LIMITS` and the database enums (A30, A34; R9).
   - **Files**: `src/schemas/limits.ts`, `src/schemas/limits.test.ts`, `src/schemas/enums.ts`,
     `src/schemas/enums.test.ts`, `src/index.ts`.
   - **Test first**:
@@ -381,7 +381,7 @@ use `Array.from({ length: 21 }, (_, i) => "t" + i)`.
   - **Done when**: `test`, `lint` and `typecheck` pass.
   - **Commit**: `feat(domain): add LIMITS and enums from database Constants (T007)`.
 
-- [ ] T008 [P] [US3] Add the `httpUrl` schema and `urlErrorCode` (A33; R8).
+- [x] T008 [P] [US3] Add the `httpUrl` schema and `urlErrorCode` (A33; R8).
   - **Files**: `src/schemas/http-url.ts`, `src/schemas/http-url.test.ts`, `src/index.ts`.
   - **Test first** (`http-url.test.ts`):
     - `" https://a.com/x/?utm_source=y "` → `{ url: "https://a.com/x/?utm_source=y", normalizedUrl: "https://a.com/x" }`.
@@ -402,7 +402,7 @@ use `Array.from({ length: 21 }, (_, i) => "t" + i)`.
   - **Done when**: `test`, `lint` and `typecheck` pass.
   - **Commit**: `feat(domain): add httpUrl schema built on normalizeUrl (T008)`.
 
-- [ ] T009 [P] [US3] Add the text schemas `note`, `title`, `folderName`, `tagName`, `tagNames`
+- [x] T009 [P] [US3] Add the text schemas `note`, `title`, `folderName`, `tagName`, `tagNames`
       and `tagIds` (A28, A29; R8).
   - **Files**: `src/schemas/text.ts`, `src/schemas/text.test.ts`, `src/index.ts`.
   - **Test first** (`text.test.ts`), one `describe` per schema. Every limit comes from `LIMITS`,
@@ -442,7 +442,7 @@ use `Array.from({ length: 21 }, (_, i) => "t" + i)`.
   - **Done when**: `test`, `lint` and `typecheck` pass.
   - **Commit**: `feat(domain): add note, name and tag schemas (T009)`.
 
-- [ ] T010 [US3] Add `itemCreate` and `itemUpdate` (A29, A33; FR-014). Depends on T008 and T009.
+- [x] T010 [US3] Add `itemCreate` and `itemUpdate` (A29, A33; FR-014). Depends on T008 and T009.
   - **Files**: `src/schemas/item.ts`, `src/schemas/item.test.ts`, `src/index.ts`.
   - **Test first** (`item.test.ts`):
     - **`itemCreate`**:
@@ -470,7 +470,7 @@ use `Array.from({ length: 21 }, (_, i) => "t" + i)`.
     output type of `itemUpdate` has `folderId?: string | null`.
   - **Commit**: `feat(domain): add itemCreate and itemUpdate schemas (T010)`.
 
-- [ ] T011 [US3] Add `previewRequest`, `previewResponse`, `previewError` and
+- [x] T011 [US3] Add `previewRequest`, `previewResponse`, `previewError` and
       `PREVIEW_ERROR_CODES` (A19, A35; R8). Depends on T005, T007 and T008.
   - **Files**: `src/schemas/preview.ts`, `src/schemas/preview.test.ts`, `src/index.ts`.
   - **Test first** (`preview.test.ts`):
@@ -520,7 +520,7 @@ importing `@markme/domain` does not load `@supabase/supabase-js`.
 
 Branch: `m2/us4-client-factory`, from `003-m2-domain-package` after PR 3 merges.
 
-- [ ] T012 [US4] Add the `./client` entry point, the `supabase-js` dependency and the isolation
+- [x] T012 [US4] Add the `./client` entry point, the `supabase-js` dependency and the isolation
       guards (A31; R11).
   - **Files**: `package.json`, `/pnpm-lock.yaml`, `eslint.config.mjs` (new),
     `src/client/index.ts` (new, a stub until T013), `src/index.test.ts`.
@@ -541,7 +541,7 @@ Branch: `m2/us4-client-factory`, from `003-m2-domain-package` after PR 3 merges.
     - `pnpm lint` at the root still passes, so the new config does not break Turbo's lint.
   - **Commit**: `build(domain): add client subpath, supabase-js and import guard (T012)`.
 
-- [ ] T013 [US4] Implement `createMarkMeClient` and `AuthStorage` (A31; R11; constitution II).
+- [x] T013 [US4] Implement `createMarkMeClient` and `AuthStorage` (A31; R11; constitution II).
   - **Files**: `src/client/factory.ts`, `src/client/factory.test.ts`, `src/client/index.ts`.
   - **Test first** (`src/client/factory.test.ts`). Setup:
     - Wrap the real `createClient` in a spy:
@@ -595,7 +595,7 @@ Branch: `m2/us4-client-factory`, from `003-m2-domain-package` after PR 3 merges.
 
 ## Phase 7: Polish & milestone exit (PR 4)
 
-- [ ] T014 [P] Update the runtime docs for M2 (constitution: update docs when behavior changes).
+- [x] T014 [P] Update the runtime docs for M2 (constitution: update docs when behavior changes).
   - **Files**: `/CLAUDE.md`, `/README.md`.
   - **Changes**:
     - **`/CLAUDE.md` "Current state"**: add an M2 paragraph. `@markme/domain` exports the URL
@@ -611,7 +611,7 @@ Branch: `m2/us4-client-factory`, from `003-m2-domain-package` after PR 3 merges.
     export in `src/index.ts` or `src/client/index.ts`.
   - **Commit**: `docs: describe the M2 domain package (T014)`.
 
-- [ ] T015 Milestone exit verification (no commit). Run [quickstart.md](quickstart.md) V1–V6 on
+- [x] T015 Milestone exit verification (no commit). Run [quickstart.md](quickstart.md) V1–V6 on
       `003-m2-domain-package` after PR 4 merges.
   - **Done when**:
     - V1: the domain test passes, with `normalize.ts`, `parse-user-url.ts` and `provider.ts` at
