@@ -6,7 +6,16 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 M0 (monorepo foundation) is implemented: `apps/extension` (WXT popup placeholder),
 `apps/preview-api` (only `GET /healthz`), `packages/config`, `packages/domain`, `packages/database`.
-No product features yet.
+
+M1 (database schema) is implemented, data layer only: tables `profiles`, `folders`, `tags`,
+`items`, `item_tags` with RLS and column-level grants, plus the `search_items` RPC. Internal
+functions (triggers, search-vector helpers) live in the `private` schema, closed to `anon` and
+`authenticated`. `@markme/database` exports the generated types plus `SearchItemRow`. No app uses
+them yet.
+
+Hosted Supabase project `markme` (free, `eu-central-1`) runs the same migrations. `pnpm db:push` is
+the manual production step after a migration PR merges (needs `supabase link` once; the ref lives in
+git-ignored `packages/database/supabase/.temp/`); never in CI.
 
 Toolchain: Node 24 (`.nvmrc`; non-interactive shells may need `source ~/.nvm/nvm.sh && nvm use`),
 pnpm 12.14.0 via corepack, TypeScript 6.0 (not 7 — typescript-eslint supports <6.1), ESLint 9
@@ -15,7 +24,7 @@ supabase ...`, no global install).
 
 Commands (repo root): `pnpm dev`, `pnpm lint`, `pnpm format:check` / `pnpm format`, `pnpm typecheck`,
 `pnpm test`, `pnpm build`, `pnpm db:start`, `pnpm db:stop`, `pnpm db:reset`, `pnpm db:test`,
-`pnpm db:types`, `pnpm db:new`. `pnpm dev` starts local Supabase (CLI + Docker), the preview API and
+`pnpm db:types`, `pnpm db:new`, `pnpm db:push`. `pnpm dev` starts local Supabase (CLI + Docker), the preview API and
 the extension dev build; it must keep working after every merge. `pnpm build` and the extension dev
 build need `apps/extension/.env`; `pnpm dev` creates `.env` for both apps from `.env.example`, filled
 from `supabase status` (an existing `.env` is never overwritten); unit tests and typecheck need no
