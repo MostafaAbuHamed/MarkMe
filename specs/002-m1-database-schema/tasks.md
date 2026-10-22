@@ -570,7 +570,7 @@ packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --he
   - Verify with `pnpm exec supabase migration list --linked --workdir packages/database`.
   - A paused free project must be resumed from the dashboard first.
   - Depends on T018.
-- [ ] T020 [US4] **Manual, with Mostafa; produces no commit**: create the hosted project and push
+- [x] T020 [US4] **Manual, with Mostafa; produces no commit**: create the hosted project and push
       (R10, quickstart V5). Do this only after PR 3 has merged, so only reviewed migrations reach
       production.
   1. Mostafa is already logged in (`pnpm exec supabase projects list` works; checked 2026-10-21).
@@ -589,7 +589,7 @@ packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --he
 
 ## Phase 7: Polish and cross-cutting concerns (PR 4)
 
-- [ ] T021 [P] Update `/CLAUDE.md` "Current state" for M1:
+- [x] T021 [P] Update `/CLAUDE.md` "Current state" for M1:
   - The five tables plus `search_items` exist, and internal functions live in `private`.
   - `pnpm db:push` is the manual production step.
   - Remove "No product features yet" only if M2 has also landed. Otherwise say "data layer only".
