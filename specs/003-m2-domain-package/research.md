@@ -147,8 +147,10 @@ from the implementation plan and are copied back into it in this change (its cha
 - **Tag lists**: an array of `tagName`, transformed by a dedupe that keeps the first spelling by
   `toLowerCase()`, then piped into `z.array(z.string()).max(20)`, so the cap applies after
   dedupe. `tagIds` uses the same shape over `z.uuid()`.
-- **Ids**: `z.uuid()` (RFC 9562 version and variant). Postgres `gen_random_uuid()` makes v4 ids,
-  which pass. Test fixtures must use real v4 ids, not all-zero ones.
+- **Ids**: `rowId = z.uuid({ version: "v4" })` in `src/schemas/ids.ts`. Plain `z.uuid()` also
+  accepts the nil uuid and other versions (checked 2026-10-22 against the installed zod 4). Every
+  MarkMe id comes from Postgres `gen_random_uuid()`, which makes v4 ids, so v4 is the exact rule.
+  Test fixtures must use real v4 ids.
 - **Objects**: default `z.object` (unknown keys are stripped), so a client cannot pass `userId`
   or other extra fields through a schema.
 - **Preview link fields** (`url`, `imageUrl`, `faviconUrl` in `previewResponse`): a string with

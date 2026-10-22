@@ -137,6 +137,7 @@ packages/domain/
     │   ├── limits.ts               # LIMITS
     │   ├── enums.ts                # mediaType, previewStatus, embedProvider
     │   ├── http-url.ts             # httpUrl, urlErrorCode
+    │   ├── ids.ts                  # rowId = z.uuid({ version: "v4" }) (R8), used by tagIds and folderId
     │   ├── text.ts                 # note, title, folderName, tagName, tagNames, tagIds
     │   ├── item.ts                 # itemCreate, itemUpdate
     │   ├── preview.ts              # previewRequest, previewResponse, previewError, PREVIEW_ERROR_CODES

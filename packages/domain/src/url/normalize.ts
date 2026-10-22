@@ -1,6 +1,13 @@
 export const MAX_URL_LENGTH = 2048;
 
-export type NormalizeError = "invalid" | "unsupported_scheme" | "has_credentials" | "too_long";
+export const NORMALIZE_ERRORS = [
+  "invalid",
+  "unsupported_scheme",
+  "has_credentials",
+  "too_long",
+] as const;
+
+export type NormalizeError = (typeof NORMALIZE_ERRORS)[number];
 
 export type NormalizeResult =
   { ok: true; url: string; normalizedUrl: string } | { ok: false; error: NormalizeError };
