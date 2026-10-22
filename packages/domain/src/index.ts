@@ -16,4 +16,5 @@ export {
 } from "./url/provider";
 export { detectMediaType, type MediaType } from "./media-type";
 export { embedProvider, mediaType, previewStatus } from "./schemas/enums";
+export { httpUrl, urlErrorCode } from "./schemas/http-url";
 export { LIMITS } from "./schemas/limits";
