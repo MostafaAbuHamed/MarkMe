@@ -4,7 +4,7 @@ begin;
 -- Schema guard for the current US1 state.
 -- Widen a grant → this file must change on purpose.
 
-select plan(71);
+select plan(72);
 
 -- Tables and columns (data-model.md, post-T009).
 
@@ -616,6 +616,25 @@ select function_privs_are(
   'authenticated',
   '{}',
   'authenticated has no privileges on private.set_updated_at()'
+);
+
+select set_eq(
+  $$
+    select a.attname::text
+    from pg_trigger t
+    join pg_attribute a on a.attrelid = t.tgrelid and a.attnum = any (t.tgattr::int2[])
+    where t.tgrelid = 'public.items'::regclass
+      and t.tgname = 'items_set_updated_at'
+  $$,
+  $$
+    select a.attname::text
+    from pg_attribute a
+    where a.attrelid = 'public.items'::regclass
+      and a.attnum > 0
+      and not a.attisdropped
+      and has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
+  $$,
+  'items_set_updated_at fires on exactly the columns authenticated may update'
 );
 
 select * from finish();

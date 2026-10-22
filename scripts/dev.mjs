@@ -130,21 +130,16 @@ function signalGroup(child, signal) {
     if (isErrno(error, "ESRCH")) {
       return;
     }
-    try {
-      child.kill(signal);
-    } catch {
-      // The child already exited.
-    }
+    child.kill(signal);
   }
 }
 
-function runApps() {
-  const child = spawn("pnpm", turboArgs, {
-    cwd: root,
-    stdio: "inherit",
-    detached: true,
-  });
-
+/**
+ * Forward SIGINT/SIGTERM to the dev-process group; SIGKILL it if it is still up 8 s after the first signal.
+ * @param {import("node:child_process").ChildProcess} child
+ * @returns {() => boolean} whether the user pressed Ctrl-C
+ */
+function forwardSignals(child) {
   let sigint = false;
   let forceKillArmed = false;
 
@@ -172,27 +167,33 @@ function runApps() {
     forward("SIGTERM");
   });
 
-  return new Promise((resolve) => {
-    let settled = false;
-    const finish = (code) => {
-      if (settled) {
-        return;
-      }
-      settled = true;
-      resolve(code);
-    };
+  return () => sigint;
+}
 
+/**
+ * @param {import("node:child_process").ChildProcess} child
+ * @param {() => boolean} interrupted
+ * @returns {Promise<number>} 130 after Ctrl-C, else the child's exit code (1 if it had none)
+ */
+function waitForExit(child, interrupted) {
+  return new Promise((resolve) => {
     child.once("error", () => {
-      finish(1);
+      resolve(1);
     });
     child.once("exit", (code, signal) => {
-      if (sigint || signal === "SIGINT") {
-        finish(130);
-        return;
-      }
-      finish(code ?? 1);
+      resolve(interrupted() || signal === "SIGINT" ? 130 : (code ?? 1));
     });
   });
+}
+
+function runApps() {
+  const child = spawn("pnpm", turboArgs, {
+    cwd: root,
+    stdio: "inherit",
+    detached: true,
+  });
+
+  return waitForExit(child, forwardSignals(child));
 }
 
 try {
@@ -202,5 +203,5 @@ try {
   printSummary(status);
   process.exit(await runApps());
 } catch (error) {
-  fail(error instanceof Error ? error.message : "unexpected failure");
+  fail(error instanceof Error ? (error.stack ?? error.message) : String(error));
 }
