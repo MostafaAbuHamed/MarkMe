@@ -1,4 +1,6 @@
-export type Provider = "youtube" | "x" | "instagram";
+export const PROVIDERS = ["youtube", "x", "instagram"] as const;
+
+export type Provider = (typeof PROVIDERS)[number];
 
 /** Same rule as M1 `items_embed_youtube_chk` in item_rules migration. */
 export const YOUTUBE_ID_PATTERN = /^[A-Za-z0-9_-]{11}$/;
