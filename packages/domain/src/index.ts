@@ -8,3 +8,10 @@ export {
   type NormalizeResult,
 } from "./url/normalize";
 export { parseUserUrl } from "./url/parse-user-url";
+export {
+  YOUTUBE_ID_PATTERN,
+  detectProvider,
+  extractYouTubeId,
+  type Provider,
+} from "./url/provider";
+export { detectMediaType, type MediaType } from "./media-type";
