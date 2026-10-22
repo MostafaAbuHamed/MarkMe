@@ -66,7 +66,7 @@ DevTools MCP plugin launches its own Chrome, so it does not work here as configu
   connected tasks), into the milestone branch.
   The milestone branch merges to `main` only when its exit criteria pass in CI.
 - Every `/plan` includes a Constitution Check; violations are justified or the plan changes.
-- A milestone starts only after its dependencies are merged (M1 ∥ M2, M3 ∥ M4 may run in parallel).
+- A milestone starts only after its dependencies are merged (M3 ∥ M4 may run in parallel).
 - UI work uses the `frontend-design` and `impeccable` skills.
 
 ## Architecture (planned)

@@ -639,7 +639,7 @@ supabase migration list --linked --workdir packages/database   # local == remote
 
 ### M2. Domain package
 
-**Depends on:** M0 (parallel with M1) · **Covers:** URL normalization, schemas, media types, client factory
+**Depends on:** M0, M1 (generated types and enums from `@markme/database`) · **Covers:** URL normalization, schemas, media types, client factory
 
 **Spec input seed**
 
@@ -747,8 +747,8 @@ The popup's "save current tab" calls `normalizeUrl` directly.
 `src/schemas/`:
 
 - `LIMITS` **(approved, A30)**: one exported object used by every schema, and by the preview API
-  when it truncates: title 300, description 1000, siteName 200, note 1000, url 2048, name 100, tags
-  per item 20. The M1 checks (A18) are ceilings above these.
+  when it truncates: title 300, description 1000, siteName 200, note 1000, url 2048, name 100,
+  tagsPerItem 20. The M1 checks (A18) are ceilings above these.
 - Enums **(approved, A34)**: `mediaType`, `previewStatus`, `embedProvider` are built from
   `Constants.public.Enums` in `@markme/database`, never copied.
 - `httpUrl` **(approved, A33)**: a schema built on `normalizeUrl`; it fails with the normalizer's
@@ -756,11 +756,13 @@ The popup's "save current tab" calls `normalizeUrl` directly.
 - `note` = trimmed, max 1000; empty after trim → `null` **(approved, A29)**.
 - `folderName` / `tagName` = trimmed, 1–100 chars. Tag names also collapse inner whitespace to one
   space and may not contain commas, because the tag input splits on them **(approved, A28)**.
-- `tagNames` = max 20; duplicates removed case-insensitively, keeping the first spelling
+- `tagNames` = max `LIMITS.tagsPerItem`; duplicates removed case-insensitively, keeping the first spelling
   (`React, react` → `["React"]`) **(approved, A28)**. The database enforces none of this.
 - `itemCreate` = `{ url: httpUrl, folderId?: uuid, tagNames?, note? }`.
 - `itemUpdate` = partial `{ title, note, folderId (nullable), tagIds }`. `title` and `note` empty
   after trim → `null` (cleared; the UI then shows site name, then URL) **(approved, A29)**.
+  `tagIds` replaces the item's tag set: uuids, duplicates removed, max `LIMITS.tagsPerItem` after
+  de-duplication, the same cap as `tagNames`.
 - `previewRequest` = `{ url: httpUrl, force?: boolean }`.
 - `previewResponse` = `{ url, title?, description?, imageUrl?, faviconUrl?, siteName?, mediaType, embed?: { provider: 'youtube', id }, provider? }`.
   - `embed.id` must match `YOUTUBE_ID_PATTERN`.
@@ -830,7 +832,7 @@ for `src/url/**`.
 
 ### M3. Preview API
 
-**Depends on:** M1, M2 (or M0 + M2 per PLAN) · **Covers:** PRD 7.3, D2, D4
+**Depends on:** M1, M2 · **Covers:** PRD 7.3, D2, D4
 
 **Spec input seed**
 
@@ -848,9 +850,13 @@ Request flow (`src/app.ts`):
 ```
 POST /v1/preview  { url, force? }
   → cors (allowlist) → json body limit 4 KB → auth (JWT) → rate limit (per sub + per IP; force limiter)
-  → zod previewRequest → normalizeUrl → pipeline → zod previewResponse → 200
+  → zod previewRequest (httpUrl yields { url, normalizedUrl }) → pipeline → zod previewResponse → 200
 Errors: 400 invalid_url | 401 unauthorized | 422 blocked_target | 429 rate_limited | 502 fetch_failed | 504 timeout
 ```
+
+`normalizeUrl` runs once, inside `httpUrl`; the pipeline fetches `url` and keys the cache by
+`normalizedUrl`. Any `previewRequest` failure, including every `httpUrl` code (`invalid`,
+`unsupported_scheme`, `has_credentials`, `too_long`), returns `400 invalid_url`.
 
 Error bodies are `{ error: code }` only, never internal details.
 
@@ -1567,7 +1573,7 @@ They settle the M2 open items (root slash, credentials, max tags, `www.`).
   `item_rules`, `items_updated_at`, `search_vector`, `search_items`) instead of five monolithic
   files; product rules and search split across US2/US3 PRs. Task list aligned to T001–T022 and
   one PR per user story for M1.
-- v1.6 (2026-10-22): M2 design review: A21–A36 approved and applied to M2 (normalizer outputs and error codes, paste helper, tracking list, raw query editing, provider helpers, media-type edge rules, tag rules, `LIMITS`, enums from `Constants`, `previewError`, client subpath, coverage gate); one PR per user story (§1.5).
+- v1.6 (2026-10-22): M2 design review: A21–A36 approved and applied to M2 (normalizer outputs and error codes, paste helper, tracking list, raw query editing, provider helpers, media-type edge rules, tag rules, `LIMITS`, enums from `Constants`, `previewError`, client subpath, coverage gate); one PR per user story (§1.5). Review follow-ups: `parseUserUrl` scheme rule and example table; M2 depends on M0 + M1; `itemUpdate.tagIds` capped; M3 maps `httpUrl` failures to `invalid_url` and normalizes once; M4 factory call and M5 paste field match M2.
 - v1.5 (2026-10-20): M1 `/speckit-plan` changes (`specs/002-m1-database-schema/research.md`):
   - Explicit revokes for Supabase's default grants (anon, TRUNCATE, EXECUTE).
   - A `private` schema for internal functions, with security-definer vector refresh.
