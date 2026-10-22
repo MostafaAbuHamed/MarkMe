@@ -133,10 +133,10 @@ apps/extension/      Chrome extension (WXT + React, Manifest V3)
 apps/preview-api/    Express preview API
 packages/config/     Shared TypeScript, ESLint, and Prettier config
 packages/database/   Supabase project: config, migrations, seed, generated types
-packages/domain/     Shared schemas and domain code
+packages/domain/     Shared rules: URL normalization, schemas, media types; client factory at @markme/domain/client
 scripts/             Local start script (pnpm dev) and its tests
 docs/                Product requirements and plans
-specs/               Spec Kit specs (current: 002-m1-database-schema)
+specs/               Spec Kit specs (current: 003-m2-domain-package)
 ```
 
 ## Docs
