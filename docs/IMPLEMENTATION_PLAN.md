@@ -739,10 +739,11 @@ The popup's "save current tab" calls `normalizeUrl` directly.
 1. `provider === 'youtube'` or oEmbed type `video` → `video`.
 2. `provider` `x`/`instagram` → `post` (Instagram reels too) **(approved, A27)**.
 3. oEmbed type `photo` or `contentType` starting with `image/` → `image` **(approved, A27)**.
-4. `og:type`: `video.*` → `video`; `article` → `article`. `music.*`, `profile`, `website` fall
-   through **(approved, A27)**.
+4. `og:type`: `video.*` → `video`; `article` → `article`. Any other value (`music.*`, `profile`,
+   `website`, …) decides nothing; evaluation continues with step 5 **(approved, A27)**.
 5. URL extension (`.png|.jpe?g|.gif|.webp|.avif|.svg`) → `image`; (`.mp4|.webm`) → `video`.
-6. Fallback → `link`. oEmbed `rich` without a provider ends here **(approved, A27)**.
+6. Fallback → `link`. oEmbed `rich` decides nothing by itself: without a provider it ends as
+   `link` unless step 4 or 5 matched (`rich` + `og:type` `article` → `article`) **(approved, A27)**.
 
 `src/schemas/`:
 
@@ -799,7 +800,8 @@ every call. There is no module-level singleton, and a test asserts this (constit
 - `normalize.test.ts`: `it.each` over the rule table, the tracking list and the edge-case table.
 - `parse-user-url.test.ts`: `it.each` over the `parseUserUrl` table (A22).
 - `provider.test.ts`: every host/path form per provider, non-matches, id extraction and bad ids.
-- `media-type.test.ts`: each precedence step, plus ties.
+- `media-type.test.ts`: each precedence step, plus ties, including `og:type` `website` on a
+  `.mp4` URL → `video` and oEmbed `rich` + `og:type` `article` → `article`.
 - `schemas.test.ts`: boundary values from `LIMITS` (note 1000 OK / 1001 fails), empty tag,
   whitespace-only names, comma, 21 tags, case-insensitive dedupe, empty → `null`, `httpUrl` error
   codes, enum values equal `Constants`.
@@ -1503,7 +1505,7 @@ both open, rename a folder in the side panel; the popup's folder list updates.
 | A24 | No provider-aware merging (`youtu.be` vs `youtube.com`, `twitter.com` vs `x.com`); `www.` kept                                                                    | M2          | Keeps the normalizer generic; merging is a separate rule set (PLAN "Later")                               | Merge provider aliases                               |
 | A25 | The query is edited as raw text; remaining pairs kept byte for byte; no percent-encoding normalization                                                            | M2          | `URLSearchParams` re-serializes values (`%20` → `+`), breaking rule 8                                     | `searchParams.delete()`                              |
 | A26 | `detectProvider`, `extractYouTubeId` and `YOUTUBE_ID_PATTERN` live in `packages/domain`                                                                           | M2/M3/M6    | M3 adapters and M6 embeds share one rule, the same as the M1 check                                        | Regex inside the M3 adapters                         |
-| A27 | Media type: oEmbed `photo` → `image`; `rich` without provider → `link`; Instagram reels → `post`; `og:type` `music.*`/`profile`/`website` → `link`                | M2          | One consistent type per provider; no guesses from generic tags                                            | Reels → `video`; `rich` → `post`                     |
+| A27 | Media type: oEmbed `photo` → `image`; reels → `post`; `rich` and `og:type` `music.*`/`profile`/`website` decide nothing                                           | M2          | One consistent type per provider; no guesses from generic tags                                            | Reels → `video`; `rich` → `post`                     |
 | A28 | Tags per item max 20; names trimmed, inner whitespace collapsed, no commas; duplicates removed case-insensitively (first spelling kept)                           | M2/M5       | The database enforces none of these; dedupe instead of failing a save                                     | Fail on duplicates; no cap                           |
 | A29 | `note`/`title` empty after trim → `null` (cleared)                                                                                                                | M2/M5/M6    | One meaning for "no value"; schemas never output `""`                                                     | Keep `""`                                            |
 | A30 | One exported `LIMITS` object (title 300, description 1000, siteName 200, note 1000, url 2048, name 100, tags 20)                                                  | M2/M3       | Every schema and the preview API's truncation use the same numbers; M1 caps (A18) stay ceilings           | Per-schema literals                                  |
