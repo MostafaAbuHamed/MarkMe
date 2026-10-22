@@ -544,7 +544,7 @@ migrations, and the README explains how.
 
 **Branch**: `m1/us4-shared-schema` from `002-m1-database-schema` after PR 3 merged.
 
-- [ ] T017 [P] [US4] Package exports in `/packages/database/src/index.ts` (contract
+- [x] T017 [P] [US4] Package exports in `/packages/database/src/index.ts` (contract
       database-package, R11):
   - Re-export:
     - `export type { Database, Json, Tables, TablesInsert, TablesUpdate, Enums } from
@@ -554,10 +554,10 @@ migrations, and the README explains how.
     `export type SearchItemRow = Database["public"]["Functions"]["search_items"]["Returns"][number];`
     It needs an `import type { Database }`.
   - Proof: `pnpm typecheck && pnpm lint` pass. Add no other runtime code.
-- [ ] T018 [P] [US4] Root script in `/package.json`: `"db:push": "supabase db push --workdir
+- [x] T018 [P] [US4] Root script in `/package.json`: `"db:push": "supabase db push --workdir
 packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --help` resolves
       to the CLI. Never add it to CI (A11).
-- [ ] T019 [US4] `/README.md` "Database" section (FR-032; contract database-package "README"):
+- [x] T019 [US4] `/README.md` "Database" section (FR-032; contract database-package "README"):
   - Local: `pnpm db:reset`, `pnpm db:test`.
   - Adding a migration: `pnpm db:new <name>`, then `pnpm db:types`, then commit both, or CI's
     drift check fails.
@@ -570,7 +570,7 @@ packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --he
   - Verify with `pnpm exec supabase migration list --linked --workdir packages/database`.
   - A paused free project must be resumed from the dashboard first.
   - Depends on T018.
-- [ ] T020 [US4] **Manual, with Mostafa; produces no commit**: create the hosted project and push
+- [x] T020 [US4] **Manual, with Mostafa; produces no commit**: create the hosted project and push
       (R10, quickstart V5). Do this only after PR 3 has merged, so only reviewed migrations reach
       production.
   1. Mostafa is already logged in (`pnpm exec supabase projects list` works; checked 2026-10-21).
@@ -589,7 +589,7 @@ packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --he
 
 ## Phase 7: Polish and cross-cutting concerns (PR 4)
 
-- [ ] T021 [P] Update `/CLAUDE.md` "Current state" for M1:
+- [x] T021 [P] Update `/CLAUDE.md` "Current state" for M1:
   - The five tables plus `search_items` exist, and internal functions live in `private`.
   - `pnpm db:push` is the manual production step.
   - Remove "No product features yet" only if M2 has also landed. Otherwise say "data layer only".
