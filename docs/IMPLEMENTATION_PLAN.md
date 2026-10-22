@@ -697,11 +697,31 @@ Edge-case table: IPv6 host `http://[::1]` (normalizes; the preview API blocks it
 empty values `?a=` and bare keys `?a` kept, repeated keys kept, very long URLs (> 2048 chars →
 `too_long`).
 
-`parseUserUrl(input: string)` **(approved, A22)**: for the paste field (US-5) only. It prefixes
-`https://` when the trimmed input has no `scheme:` prefix, contains no whitespace, and the part
-before the first `/`, `?` or `#` contains a dot; then it calls `normalizeUrl`. `example.com/x?y=1` →
-`https://example.com/x?y=1`; `localhost:3000` and `notes` → `invalid`. The popup's "save current
-tab" calls `normalizeUrl` directly.
+`parseUserUrl(input: string)` **(approved, A22)**: for the paste field (US-5) only. On the trimmed
+input, the first matching step wins:
+
+1. It has a scheme → `normalizeUrl(input)`. A scheme is `name://` (`name` = a letter, then letters,
+   digits, `+`, `-`, `.`, case-insensitive), or one of `http:`, `https:`, `mailto:`, `javascript:`,
+   `data:`, `tel:`, `sms:`, `about:`, `blob:`, `vbscript:`. A bare `name:` is not a scheme, so
+   `host:port` input reaches step 2.
+2. It contains no whitespace and the part before the first `/`, `?` or `#` contains a dot →
+   `normalizeUrl('https://' + input)`.
+3. Otherwise → `invalid`, without calling `normalizeUrl` (WHATWG would read `localhost:` as a
+   scheme).
+
+| Input                | Step | Result                                               |
+| -------------------- | ---- | ---------------------------------------------------- |
+| `example.com/x?y=1`  | 2    | `https://example.com/x?y=1`                          |
+| `example.com:8080/x` | 2    | `https://example.com:8080/x`                         |
+| `ftp://a.com`        | 1    | `unsupported_scheme`                                 |
+| `mailto:a@b.com`     | 1    | `unsupported_scheme`                                 |
+| `localhost:3000`     | 3    | `invalid` (no dot)                                   |
+| `notes`              | 3    | `invalid`                                            |
+| `a.com b`            | 3    | `invalid` (whitespace)                               |
+| `u:p@a.com`          | 2    | `has_credentials`                                    |
+| `a:b.c`              | 2    | `invalid` (`https://a:b.c` fails to parse: bad port) |
+
+The popup's "save current tab" calls `normalizeUrl` directly.
 
 `src/url/provider.ts` **(approved, A26)**: the provider rules live here, not in the M3 adapters.
 
@@ -775,7 +795,7 @@ every call. There is no module-level singleton, and a test asserts this (constit
 **Tests**
 
 - `normalize.test.ts`: `it.each` over the rule table, the tracking list and the edge-case table.
-- `parse-user-url.test.ts`: prefix and no-prefix cases from A22.
+- `parse-user-url.test.ts`: `it.each` over the `parseUserUrl` table (A22).
 - `provider.test.ts`: every host/path form per provider, non-matches, id extraction and bad ids.
 - `media-type.test.ts`: each precedence step, plus ties.
 - `schemas.test.ts`: boundary values from `LIMITS` (note 1000 OK / 1001 fails), empty tag,
