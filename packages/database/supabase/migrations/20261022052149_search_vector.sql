@@ -85,6 +85,19 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Wait for concurrent writers on the tag and the item in their own statements, so
+  -- the update below takes a snapshot that sees what they committed. Tag before
+  -- item, the same order a rename locks them in.
+  perform 1
+  from public.tags
+  where id = coalesce(new.tag_id, old.tag_id)
+  for share;
+
+  perform 1
+  from public.items
+  where id = coalesce(new.item_id, old.item_id)
+  for no key update;
+
   update public.items
   set search_vector = private.item_search_vector(id, title, description, note, url)
   where id = coalesce(new.item_id, old.item_id);
@@ -108,6 +121,18 @@ security definer
 set search_path = ''
 as $$
 begin
+  -- Lock the tagged items in id order first, so the update below sees concurrent
+  -- item and link changes that committed while it waited.
+  perform 1
+  from public.items
+  where id in (
+    select item_id
+    from public.item_tags
+    where tag_id = new.id
+  )
+  order by id
+  for no key update;
+
   update public.items
   set search_vector = private.item_search_vector(id, title, description, note, url)
   where id in (
