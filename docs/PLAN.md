@@ -3,7 +3,7 @@
 |        |                                                                                        |
 | ------ | -------------------------------------------------------------------------------------- |
 | Owner  | Mostafa                                                                                |
-| Status | Draft v1.2                                                                             |
+| Status | Draft v1.4                                                                             |
 | Date   | 2026-10-17                                                                             |
 | Input  | [PRD.md](PRD.md) (approved), [constitution](../.specify/memory/constitution.md) v1.1.1 |
 | Detail | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): technical design per milestone       |
@@ -12,7 +12,7 @@
 
 - Each milestone below is **one Spec Kit feature**: `/speckit-specify` -> `/speckit-clarify` -> `/speckit-plan` -> `/speckit-tasks` -> `/speckit-analyze` -> `/speckit-implement`.
 - Claude (PM) writes the `/speckit-specify` input for each milestone; Mostafa runs it on his machine with Claude Code + Cursor, delegation and review skills.
-- One branch per milestone. Each Spec Kit task gets one commit and one PR into the milestone branch, with CI green. The milestone branch merges to `main` only when its exit criteria pass in CI.
+- One branch per milestone. Each Spec Kit task gets one commit; each user story (a group of connected tasks) gets one PR into the milestone branch, with CI green. The milestone branch merges to `main` only when its exit criteria pass in CI.
 - UI milestones use the **frontend-design** and **impeccable** skills.
 - Milestones run in order; a milestone starts only after its dependencies are merged.
 - The constitution (v1.1.1) is ratified and binding. Change it only through its Governance section.
@@ -35,7 +35,7 @@ Each milestone's exit criteria below come on top of these:
 | --- | ---------------------------- | ---------- | ------------------------------------------------------- |
 | M0  | Monorepo foundation          | –          | Setup, CI, secrets hygiene                              |
 | M1  | Database schema + RLS        | M0         | Domain model (PRD 6), D1, D3, D5, 7.4                   |
-| M2  | Domain package               | M0         | URL normalization, schemas, media types                 |
+| M2  | Domain package               | M0, M1     | URL normalization, schemas, media types                 |
 | M3  | Preview API                  | M1, M2     | 7.3, D2, D4                                             |
 | M4  | Extension shell + auth       | M1, M2     | US-1, US-1b, US-2, US-3                                 |
 | M5  | Save flow + previews         | M3, M4     | US-4, US-5, US-6, US-8, US-9, US-10, D3                 |
@@ -43,8 +43,7 @@ Each milestone's exit criteria below come on top of these:
 | M7  | Folders + tags management    | M6         | US-15, US-16                                            |
 | M8  | Hardening + release          | M7         | US-7 (optional), E2E, perf, a11y audit, README, release |
 
-M2 can run in parallel with M1. M3 and M4 can run in parallel.
-M3 needs JWT verification, not the schema; if it helps, it can depend on M0 + M2 only and run alongside M1.
+M3 and M4 can run in parallel. M2 uses M1's generated types and enums, so it starts after M1.
 
 **Spike before the M4 spec (can run during M1/M2):** Google sign-in via `launchWebAuthFlow` with a pinned extension ID, account linking against a password account with an _unconfirmed_ email, and Instagram/X oEmbed access. Record the results in the M3 and M4 specs.
 
@@ -163,6 +162,7 @@ M3 needs JWT verification, not the schema; if it helps, it can depend on M0 + M2
 ### Later
 
 - Public sharing of items and collections.
+- Provider-aware URL merging for duplicates (`youtu.be/ID` = `youtube.com/watch?v=ID`, `twitter.com` = `x.com`, `m.` hosts); not in v1 (IMPLEMENTATION_PLAN A24).
 
 ## 4. Risks to watch during v1
 
@@ -185,6 +185,7 @@ Run the OAuth/oEmbed spike, and write the `/speckit-specify` input for **M0 Mono
 
 ## Changelog
 
+- v1.4 (2026-10-22): one PR per user story (IMPLEMENTATION_PLAN A36); provider-aware URL merging added to Later (A24); M2 depends on M0 + M1.
 - v1.3 (2026-10-20): M1 and M3 bullets updated for the M1 design review (IMPLEMENTATION_PLAN §4 A13–A20).
 - v1.2 (2026-10-17): linked IMPLEMENTATION_PLAN.md (technical design, tasks, spike S0 steps).
 - v1.1 (2026-10-17): fixed M1 coverage; added common definition of done, secrets and DB-test CI to M0, early cloud deploys (M1, M3), pre-M4 spike, background-worker preview flow, pinned extension ID, earlier E2E and a11y checks, measurable perf exits, unpacked-only release, new risks.

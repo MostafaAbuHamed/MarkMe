@@ -1,4 +1,13 @@
 <!--
+Sync Impact Report (1.1.3, 2026-10-22)
+- Version change: 1.1.2 → 1.1.3 (PATCH, approved by Mostafa)
+- Development Workflow: "one commit and one PR per task" replaced by one commit per task and one
+  PR per user story (a group of connected tasks) into the milestone branch. Reason: the M1 trial
+  (specs/002-m1-database-schema/plan.md, Complexity Tracking) is adopted as the rule (decision
+  A36). CLAUDE.md, docs/PLAN.md §1 and docs/IMPLEMENTATION_PLAN.md §1.5 changed in the same change.
+- Templates: plan-template.md and tasks-template.md name no PR rule; unchanged.
+- Principles: unchanged.
+
 Sync Impact Report (1.1.2, 2026-10-20)
 - Version change: 1.1.1 → 1.1.2 (PATCH, approved by Mostafa)
 - Security principle: "allowlisted `embed_html`" replaced by embeds stored as provider + validated
@@ -125,7 +134,8 @@ and a spec disagree, this constitution wins until amended.
 
 - Versions ship in order (v1, v2, v3). Each is finished and validated before the next starts.
 - Each milestone in `docs/PLAN.md` is one Spec Kit feature: `/specify` -> `/clarify` -> `/plan`
-  -> `/tasks` -> `/implement`. One branch per milestone; one commit and one PR per task.
+  -> `/tasks` -> `/implement`. One branch per milestone; one commit per task; one PR per user
+  story (a group of connected tasks) into the milestone branch.
 - Every `/plan` includes a Constitution Check against the principles above; any violation is
   listed with its justification or the plan changes.
 - Execution runs on Mostafa's machine with Claude Code + Cursor, using the delegation and review
@@ -144,4 +154,4 @@ and a spec disagree, this constitution wins until amended.
 - Reviews check compliance; unjustified complexity is rejected.
 - Runtime guidance for agents lives in `CLAUDE.md`, which must not contradict this document.
 
-**Version**: 1.1.2 | **Ratified**: 2026-10-17 | **Last Amended**: 2026-10-20
+**Version**: 1.1.3 | **Ratified**: 2026-10-17 | **Last Amended**: 2026-10-22

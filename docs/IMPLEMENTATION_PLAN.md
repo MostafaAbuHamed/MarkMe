@@ -3,7 +3,7 @@
 |        |                                                                                                      |
 | ------ | ---------------------------------------------------------------------------------------------------- |
 | Owner  | Mostafa                                                                                              |
-| Status | Draft v1.5                                                                                           |
+| Status | Draft v1.6                                                                                           |
 | Date   | 2026-10-17                                                                                           |
 | Inputs | [PRD.md](PRD.md), [PLAN.md](PLAN.md) v1.1, [constitution](../.specify/memory/constitution.md) v1.1.2 |
 
@@ -123,8 +123,9 @@ Committed `.env.example` files list every key. Real `.env*` files are git-ignore
 
 - Spec Kit creates one branch per milestone, e.g. `001-m0-monorepo-foundation`,
   `002-m1-database-rls`, `003-m2-domain`, and so on.
-- One Spec Kit task = one commit = one PR into the milestone branch. The milestone branch merges to
-  `main` when its exit criteria pass in CI.
+- One Spec Kit task = one commit. One user story (a group of connected tasks) = one PR into the
+  milestone branch **(approved, A36)**. The milestone branch merges to `main` when its exit criteria
+  pass in CI.
 - Commit format: Conventional Commits (`feat(domain): …`, `test(preview-api): …`, `chore(ci): …`).
 
 ### 1.6 CI (GitHub Actions, `ci.yml`)
@@ -638,7 +639,7 @@ supabase migration list --linked --workdir packages/database   # local == remote
 
 ### M2. Domain package
 
-**Depends on:** M0 (parallel with M1) · **Covers:** URL normalization, schemas, media types, client factory
+**Depends on:** M0, M1 (generated types and enums from `@markme/database`) · **Covers:** URL normalization, schemas, media types, client factory
 
 **Spec input seed**
 
@@ -650,49 +651,131 @@ supabase migration list --linked --workdir packages/database   # local == remote
 
 **Technical design**
 
-`src/url/normalize.ts`:
-`normalizeUrl(input: string): { ok: true; url: string } | { ok: false; error: 'invalid' | 'unsupported_scheme' }`
+The M2 design review (2026-10-22) settled the open items and added A21–A36 (§4). M1 is merged, so
+the package uses the real `Database` types from `@markme/database` (new workspace dependency).
 
-| #   | Rule                                                         | Example in → out                                                                              |
-| --- | ------------------------------------------------------------ | --------------------------------------------------------------------------------------------- |
-| 1   | Trim whitespace; parse with WHATWG `URL`                     | `"  https://a.com "` → `https://a.com`                                                        |
-| 2   | Only `http:`/`https:`                                        | `ftp://a.com` → `unsupported_scheme`; `javascript:…` → `unsupported_scheme`                   |
-| 3   | Lowercase scheme and host (WHATWG does it; IDN → punycode)   | `HTTPS://Ex.COM/A` → `https://ex.com/A` (path case kept)                                      |
-| 4   | Strip default port                                           | `https://a.com:443/x` → `https://a.com/x`; `http://a.com:8080` kept                           |
-| 5   | Strip fragment                                               | `https://a.com/x#top` → `https://a.com/x`                                                     |
-| 6   | Strip tracking params: `utm_*` (any case), `fbclid`, `gclid` | `?utm_source=x&id=2` → `?id=2`                                                                |
-| 7   | Drop an empty query                                          | `https://a.com/x?` / all params stripped → no `?`                                             |
-| 8   | Keep remaining param order and values unchanged              | `?b=2&a=1` stays                                                                              |
-| 9   | Remove trailing slash on path; root has no slash in output   | `https://a.com/x/` → `https://a.com/x`; `https://a.com/` → `https://a.com` **(approved, A5)** |
-| 10  | Keep userinfo? → **reject** URLs with credentials            | `https://u:p@a.com` → `invalid` (avoids storing secrets) **(approved, A5)**                   |
+`src/url/normalize.ts`:
+`normalizeUrl(input: string): { ok: true; url: string; normalizedUrl: string } | { ok: false; error: 'invalid' | 'unsupported_scheme' | 'has_credentials' | 'too_long' }`
+**(approved, A21)**
+
+- `url` is the trimmed, parsed `href` with tracking params kept: the link "open original" uses.
+- `normalizedUrl` applies every rule below. It is the duplicate key and the preview cache key.
+- Both outputs are capped at 2048 chars; a longer one → `too_long`.
+
+| #   | Rule                                                                             | Example in → out                                                                              |
+| --- | -------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------- |
+| 1   | Trim whitespace; parse with WHATWG `URL`                                         | `"  https://a.com "` → `https://a.com`                                                        |
+| 2   | Only `http:`/`https:`                                                            | `ftp://a.com` → `unsupported_scheme`; `javascript:…` → `unsupported_scheme`                   |
+| 3   | Lowercase scheme and host (WHATWG does it; IDN → punycode)                       | `HTTPS://Ex.COM/A` → `https://ex.com/A` (path case kept)                                      |
+| 4   | Strip default port                                                               | `https://a.com:443/x` → `https://a.com/x`; `http://a.com:8080` kept                           |
+| 5   | Strip fragment                                                                   | `https://a.com/x#top` → `https://a.com/x`                                                     |
+| 6   | Strip tracking params, key matched case-insensitively **(approved, A23)**        | `?utm_source=x&id=2` → `?id=2`; `?IGSH=abc` → no query                                        |
+| 7   | Drop an empty query                                                              | `https://a.com/x?` / all params stripped → no `?`                                             |
+| 8   | Keep remaining params byte for byte: order, values, encoding **(approved, A25)** | `?b=2&a=1` stays; `?q=a+b&r=%20` stays                                                        |
+| 9   | Remove trailing slash on path; root has no slash in output                       | `https://a.com/x/` → `https://a.com/x`; `https://a.com/` → `https://a.com` **(approved, A5)** |
+| 10  | Reject URLs with credentials                                                     | `https://u:p@a.com` → `has_credentials` **(approved, A5, A21)**                               |
+
+Tracking params (A23):
+
+- Everywhere: `utm_*`, `fbclid`, `gclid`, `dclid`, `gbraid`, `wbraid`, `msclkid`, `igsh`, `igshid`,
+  `mc_cid`, `mc_eid`.
+- On YouTube hosts only (`youtube.com` and subdomains, `youtu.be`): `si`. Other sites may use `si`
+  for real data.
+- The list is close to permanent: rows keep the `normalized_url` they were saved with (A17), so a
+  later change lets some duplicates through.
+
+Query handling (A25): split the raw query on `&`, drop pairs whose key is on the list, join the
+rest unchanged. `URLSearchParams` is not used to write the query, because it re-serializes every
+pair (`%20` → `+`). Percent-encoding is not normalized (`%2f` ≠ `%2F`).
+
+Not merged in v1 **(approved, A24)**: `www.` is kept; provider aliases (`youtu.be/ID` vs
+`youtube.com/watch?v=ID`, `twitter.com` vs `x.com`, `m.` hosts) stay distinct URLs. Provider-aware
+merging is listed under PLAN "Later".
 
 Edge-case table: IPv6 host `http://[::1]` (normalizes; the preview API blocks it), IDN
-`https://bücher.de` → `https://xn--bcher-kva.de`, encoded paths left as-is, `www.` **kept** (not in
-PRD), repeated slashes kept, very long URLs (cap 2048 chars → `invalid`).
+`https://bücher.de` → `https://xn--bcher-kva.de`, encoded paths left as-is, repeated slashes kept,
+empty values `?a=` and bare keys `?a` kept, repeated keys kept, very long URLs (> 2048 chars →
+`too_long`).
 
-`src/media-type.ts`: `detectMediaType(input: { url: string; contentType?: string; ogType?: string; oembedType?: string; provider?: 'youtube' | 'x' | 'instagram' }): MediaType`. The first match wins:
+`parseUserUrl(input: string)` **(approved, A22)**: for the paste field (US-5) only. On the trimmed
+input, the first matching step wins:
+
+1. It has a scheme → `normalizeUrl(input)`. A scheme is `name://` (`name` = a letter, then letters,
+   digits, `+`, `-`, `.`, case-insensitive), or one of `http:`, `https:`, `mailto:`, `javascript:`,
+   `data:`, `tel:`, `sms:`, `about:`, `blob:`, `vbscript:`. A bare `name:` is not a scheme, so
+   `host:port` input reaches step 2.
+2. It contains no whitespace and the part before the first `/`, `?` or `#` contains a dot →
+   `normalizeUrl('https://' + input)`.
+3. Otherwise → `invalid`, without calling `normalizeUrl` (WHATWG would read `localhost:` as a
+   scheme).
+
+| Input                | Step | Result                                               |
+| -------------------- | ---- | ---------------------------------------------------- |
+| `example.com/x?y=1`  | 2    | `https://example.com/x?y=1`                          |
+| `example.com:8080/x` | 2    | `https://example.com:8080/x`                         |
+| `ftp://a.com`        | 1    | `unsupported_scheme`                                 |
+| `mailto:a@b.com`     | 1    | `unsupported_scheme`                                 |
+| `localhost:3000`     | 3    | `invalid` (no dot)                                   |
+| `notes`              | 3    | `invalid`                                            |
+| `a.com b`            | 3    | `invalid` (whitespace)                               |
+| `u:p@a.com`          | 2    | `has_credentials`                                    |
+| `a:b.c`              | 2    | `invalid` (`https://a:b.c` fails to parse: bad port) |
+
+The popup's "save current tab" calls `normalizeUrl` directly.
+
+`src/url/provider.ts` **(approved, A26)**: the provider rules live here, not in the M3 adapters.
+
+- `detectProvider(url): 'youtube' | 'x' | 'instagram' | null`:
+  - YouTube: `youtube.com`, `www.`, `m.`, `music.`, `youtu.be`; paths `/watch`, `/shorts/`,
+    `/embed/`, `/live/`.
+  - X: `x.com`, `twitter.com`, `mobile.` hosts.
+  - Instagram: `instagram.com` paths `/p/`, `/reel/`, `/tv/`.
+- `extractYouTubeId(url): string | null`, checked against the exported `YOUTUBE_ID_PATTERN`
+  (`^[A-Za-z0-9_-]{11}$`), the same rule as the M1 check (A19).
+- M3 adapters call `detectProvider`; M6 builds the iframe from the id.
+
+`src/media-type.ts`: `detectMediaType(input: { url: string; contentType?: string; ogType?: string; oembedType?: string; provider?: Provider }): MediaType`. The first match wins:
 
 1. `provider === 'youtube'` or oEmbed type `video` → `video`.
-2. `provider` `x`/`instagram` → `post`.
-3. `contentType` starts with `image/` → `image`.
-4. `og:type`: `video.*` → `video`; `article` → `article`.
+2. `provider` `x`/`instagram` → `post` (Instagram reels too) **(approved, A27)**.
+3. oEmbed type `photo` or `contentType` starting with `image/` → `image` **(approved, A27)**.
+4. `og:type`: `video.*` → `video`; `article` → `article`. Any other value (`music.*`, `profile`,
+   `website`, …) decides nothing; evaluation continues with step 5 **(approved, A27)**.
 5. URL extension (`.png|.jpe?g|.gif|.webp|.avif|.svg`) → `image`; (`.mp4|.webm`) → `video`.
-6. Fallback → `link`.
+6. Fallback → `link`. oEmbed `rich` decides nothing by itself: without a provider it ends as
+   `link` unless step 4 or 5 matched (`rich` + `og:type` `article` → `article`) **(approved, A27)**.
 
 `src/schemas/`:
 
-- `note` = `z.string().trim().max(1000)`.
-- `folderName` / `tagName` = trimmed, 1–100 chars. Tag names may not contain commas, because the
-  tag input splits on them.
-- `itemCreate` = `{ url: httpUrl, folderId?: uuid, tagNames?: tagName[] (max 20), note? }`.
-- `itemUpdate` = partial `{ title (max 300), note, folderId (nullable), tagIds }`.
+- `LIMITS` **(approved, A30)**: one exported object used by every schema, and by the preview API
+  when it truncates: title 300, description 1000, siteName 200, note 1000, url 2048, name 100,
+  tagsPerItem 20. The M1 checks (A18) are ceilings above these.
+- Enums **(approved, A34)**: `mediaType`, `previewStatus`, `embedProvider` are built from
+  `Constants.public.Enums` in `@markme/database`, never copied.
+- `httpUrl` **(approved, A33)**: a schema built on `normalizeUrl`; it fails with the normalizer's
+  error code and outputs `{ url, normalizedUrl }`. Used by `itemCreate` and `previewRequest`.
+- `note` = trimmed, max 1000; empty after trim → `null` **(approved, A29)**.
+- `folderName` / `tagName` = trimmed, 1–100 chars. Tag names also collapse inner whitespace to one
+  space and may not contain commas, because the tag input splits on them **(approved, A28)**.
+- `tagNames` = max `LIMITS.tagsPerItem`; duplicates removed case-insensitively, keeping the first spelling
+  (`React, react` → `["React"]`) **(approved, A28)**. The database enforces none of this.
+- `itemCreate` = `{ url: httpUrl, folderId?: uuid, tagNames?, note? }`.
+- `itemUpdate` = partial `{ title, note, folderId (nullable), tagIds }`. `title` and `note` empty
+  after trim → `null` (cleared; the UI then shows site name, then URL) **(approved, A29)**.
+  `tagIds` replaces the item's tag set: uuids, duplicates removed, max `LIMITS.tagsPerItem` after
+  de-duplication, the same cap as `tagNames`.
 - `previewRequest` = `{ url: httpUrl, force?: boolean }`.
 - `previewResponse` = `{ url, title?, description?, imageUrl?, faviconUrl?, siteName?, mediaType, embed?: { provider: 'youtube', id }, provider? }`.
-  - `embed.id` must match `^[A-Za-z0-9_-]{11}$` for YouTube, the same rule as the M1 check (A19).
-  - String lengths are capped (title 300, description 1000, URLs 2048).
+  - `embed.id` must match `YOUTUBE_ID_PATTERN`.
+  - String lengths come from `LIMITS`.
   - The preview API and the client both parse with it.
+- `previewError` = `{ error: 'invalid_url' | 'unauthorized' | 'blocked_target' | 'rate_limited' | 'fetch_failed' | 'timeout' }`
+  **(approved, A35)**: the M3 error bodies, parsed by the client from the same source.
+- Schemas use camelCase. Mapping database rows to them belongs to M5 (`src/data/*.ts`).
 
-`src/client/factory.ts`:
+`src/client/factory.ts`, exported only from the subpath `@markme/domain/client`, so importing
+`@markme/domain` never loads `supabase-js` (the preview API only needs the rules)
+**(approved, A31)**. New dependency `@supabase/supabase-js` ≥ 2.107 (S0 Q5: lockless refresh).
 
 ```ts
 export interface AuthStorage {
@@ -704,47 +787,54 @@ export function createMarkMeClient(opts: {
   url: string;
   anonKey: string;
   storage: AuthStorage;
-  flowType?: "pkce" | "implicit";
-  autoRefreshToken?: boolean;
-  detectSessionInUrl?: boolean;
+  detectSessionInUrl?: boolean; // default false
 }): SupabaseClient<Database>;
 ```
 
-It returns a **new** client every call. There is no module-level singleton, and a test asserts this
-(constitution II).
+The factory fixes `flowType: 'pkce'`, `autoRefreshToken: true` and `persistSession: true`, and
+accepts no `lock` option, so no surface can pick a setting S0 ruled out. It returns a **new** client
+every call. There is no module-level singleton, and a test asserts this (constitution II).
 
 **Tests**
 
-- `normalize.test.ts`: `it.each` over the rule table + edge-case table. **Coverage threshold 100%**
-  lines/branches for `src/url/**` in `vitest.config.ts`.
-- `media-type.test.ts`: each precedence step, plus ties.
-- `schemas.test.ts`: boundary values (note 1000 OK / 1001 fails, empty tag, whitespace-only names).
-- `factory.test.ts`: uses the passed storage, and two calls return different instances.
+- `normalize.test.ts`: `it.each` over the rule table, the tracking list and the edge-case table.
+- `parse-user-url.test.ts`: `it.each` over the `parseUserUrl` table (A22).
+- `provider.test.ts`: every host/path form per provider, non-matches, id extraction and bad ids.
+- `media-type.test.ts`: each precedence step, plus ties, including `og:type` `website` on a
+  `.mp4` URL → `video` and oEmbed `rich` + `og:type` `article` → `article`.
+- `schemas.test.ts`: boundary values from `LIMITS` (note 1000 OK / 1001 fails), empty tag,
+  whitespace-only names, comma, 21 tags, case-insensitive dedupe, empty → `null`, `httpUrl` error
+  codes, enum values equal `Constants`.
+- `factory.test.ts`: uses the passed storage, fixed options applied, and two calls return different
+  instances.
+- **Coverage gate (approved, A32):** `@vitest/coverage-v8` (new dev dependency; reason: the M2 exit
+  needs a gate, and v8 coverage needs no instrumentation build). Threshold 100% lines/branches for
+  `src/url/**`. The domain `test` script always runs with coverage, so the existing CI `test` check
+  enforces the gate.
 
 **Task breakdown**
 
-| ID    | Task                                                                                                                        |
-| ----- | --------------------------------------------------------------------------------------------------------------------------- |
-| M2-T1 | `normalizeUrl` + full rule/edge tables + coverage gate                                                                      |
-| M2-T2 | zod schemas + tests                                                                                                         |
-| M2-T3 | `detectMediaType` + tests                                                                                                   |
-| M2-T4 | `createMarkMeClient` + `AuthStorage` type + tests (depends on M1 types; stub `Database` type if M1 not merged, then switch) |
+One PR per user story into the milestone branch, one commit per task (A36). Order US1 → US2 → US3 →
+US4.
 
-**Exit verification:** `pnpm --filter @markme/domain test --coverage` passes, with the normalization
-coverage gate at 100%.
+| Story                   | Tasks                                                                                              |
+| ----------------------- | -------------------------------------------------------------------------------------------------- |
+| US1 URL normalization   | `normalizeUrl` + rule/tracking/edge tables; `parseUserUrl`; coverage dependency + 100% gate        |
+| US2 Link classification | `detectProvider` + `extractYouTubeId` + `YOUTUBE_ID_PATTERN`; `detectMediaType`                    |
+| US3 Validation rules    | `LIMITS` + enums from `Constants`; `httpUrl`, note/name/tag schemas, item schemas; preview schemas |
+| US4 Client factory      | `@markme/domain/client` subpath; `createMarkMeClient` + `AuthStorage`; `supabase-js` dependency    |
 
-**Open items for `/clarify`**
+US3 builds `httpUrl` on US1 and `previewResponse` on US2's id pattern. US2 and US4 depend on nothing
+but M0/M1.
 
-- Root trailing slash.
-- Credentials in URL.
-- Max tags per item.
-- Whether `www.` is stripped (proposed: no).
+**Exit verification:** `pnpm --filter @markme/domain test` passes, with the coverage gate at 100%
+for `src/url/**`.
 
 ---
 
 ### M3. Preview API
 
-**Depends on:** M1, M2 (or M0 + M2 per PLAN) · **Covers:** PRD 7.3, D2, D4
+**Depends on:** M1, M2 · **Covers:** PRD 7.3, D2, D4
 
 **Spec input seed**
 
@@ -762,9 +852,13 @@ Request flow (`src/app.ts`):
 ```
 POST /v1/preview  { url, force? }
   → cors (allowlist) → json body limit 4 KB → auth (JWT) → rate limit (per sub + per IP; force limiter)
-  → zod previewRequest → normalizeUrl → pipeline → zod previewResponse → 200
+  → zod previewRequest (httpUrl yields { url, normalizedUrl }) → pipeline → zod previewResponse → 200
 Errors: 400 invalid_url | 401 unauthorized | 422 blocked_target | 429 rate_limited | 502 fetch_failed | 504 timeout
 ```
+
+`normalizeUrl` runs once, inside `httpUrl`; the pipeline fetches `url` and keys the cache by
+`normalizedUrl`. Any `previewRequest` failure, including every `httpUrl` code (`invalid`,
+`unsupported_scheme`, `has_credentials`, `too_long`), returns `400 invalid_url`.
 
 Error bodies are `{ error: code }` only, never internal details.
 
@@ -779,7 +873,7 @@ Error bodies are `{ error: code }` only, never internal details.
 | `parse/html-metadata.ts` | `cheerio` (reason: robust HTML parsing; no DOM needed). Read the first 2 MB only. Priority: `og:*` → `twitter:*` → `<title>`/`meta[name=description]`. Favicon: `link[rel~=icon]` → `/favicon.ico`. Resolve all URLs relative to the final URL; keep only `http(s)` URLs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                        |
 | `parse/sanitize.ts`      | Strip tags and control chars from every string, decode entities, collapse whitespace, cap lengths (same caps as `previewResponse`).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `oembed/*`               | Provider adapters `{ match(url): boolean; fetch(url): Promise<Partial<Preview>> }`, each calling **only its fixed endpoint** through `safeFetch` (the endpoint is a constant, never user-derived). Disabled adapters return `null` → HTML path. YouTube: `https://www.youtube.com/oembed?format=json&url=…`. X: `https://publish.x.com/oembed?omit_script=true&url=…`. Instagram: `https://graph.facebook.com/v25.0/instagram_oembed?url=…` (tokenless; `access_token` added only if `META_OEMBED_TOKEN` is set). X/Instagram return only a `blockquote`: its text becomes the description, and the HTML path fills title/image (S0 Q6).                                                                                                                                                                                                         |
-| `embed`                  | **Provider + validated id, never HTML (approved, A6 as amended by A19).** YouTube: extract the video ID with a strict regex → `embed: { provider: 'youtube', id }`. X/Instagram: no `embed` (their embeds need remote scripts, which MV3 extension pages can't run); title/author/thumbnail still returned. Each surface builds its own iframe (`https://www.youtube-nocookie.com/embed/{id}`) from the id.                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| `embed`                  | **Provider + validated id, never HTML (approved, A6 as amended by A19).** YouTube: extract the video ID with `extractYouTubeId` from `packages/domain` (A26) → `embed: { provider: 'youtube', id }`. X/Instagram: no `embed` (their embeds need remote scripts, which MV3 extension pages can't run); title/author/thumbnail still returned. Each surface builds its own iframe (`https://www.youtube-nocookie.com/embed/{id}`) from the id.                                                                                                                                                                                                                                                                                                                                                                                                     |
 | `pipeline.ts`            | `validate → cache → oEmbed match → safeFetch HTML → parse → detectMediaType → sanitize → cache.set → return`. On provider failure, fall through to HTML. On HTML failure, throw a typed error mapped to 502/504/422.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                             |
 
 **Docker and deploy**
@@ -887,7 +981,9 @@ Run against both local and the Cloud Run URL.
 - `src/lib/storage-adapter.ts`: `chromeStorageAdapter: AuthStorage` over `browser.storage.local`
   (survives restarts). Keys are namespaced by the supabase-js `storageKey`.
 - `src/lib/supabase.ts`:
-  - Each entrypoint calls `createMarkMeClient({ url, anonKey, storage: chromeStorageAdapter, flowType: 'pkce', detectSessionInUrl: false, autoRefreshToken: true })` with **no `lock` option** (auth-js is lockless since 2.107; S0 Q5)
+  - Each entrypoint calls `createMarkMeClient({ url, anonKey, storage: chromeStorageAdapter })`
+    (M2: the factory fixes PKCE, auto refresh and session persistence, `detectSessionInUrl`
+    defaults to `false`, and there is **no `lock` option**; auth-js is lockless since 2.107, S0 Q5)
     once **per surface** (module scope of that entrypoint; not shared across surfaces).
   - Surfaces subscribe to `browser.storage.onChanged` to call `supabase.auth.getSession()` and
     re-render when another surface signs in or out.
@@ -1024,8 +1120,11 @@ Manual checklist: Google sign-in works; Chrome restart keeps the session; sign o
     - Prefill the URL field.
     - The **Save** button is enabled as soon as the URL is known. Folder and tag lists load in
       parallel and never block the button.
-  - The paste field validates with `normalizeUrl`. Non-http(s) URLs (`chrome://`, `file://`) show
-    "This page can't be saved".
+  - The paste field validates with `parseUserUrl` (A22), so `example.com/post` is accepted; the
+    current-tab prefill uses `normalizeUrl`. Error codes (A21) map to messages: `invalid` → "Enter
+    a valid link"; `unsupported_scheme` (`chrome://`, `file://`) → "This page can't be saved";
+    `has_credentials` → "Links with a username or password can't be saved"; `too_long` → "This
+    link is too long".
   - `FolderSelect` (from the `folders` query), `TagInput` (combobox with autocomplete over `tags`;
     Enter/comma creates a chip; keyboard and ARIA combobox pattern), `NoteField` with a 1000-char
     counter.
@@ -1378,28 +1477,44 @@ both open, rename a folder in the side panel; the popup's folder list updates.
 
 ## 4. Decisions (all approved by Mostafa, 2026-10-18)
 
-| #   | Proposal                                                                                       | Where       | Why                                                                                          | Rejected alternative                                 |
-| --- | ---------------------------------------------------------------------------------------------- | ----------- | -------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
-| A1  | Add `items.favicon_url`, filled by the preview API                                             | M1/M3/M5    | US-9 requires a favicon; the alternative needs the extra `favicon` permission                | No favicon overlay; placeholder only                 |
-| A2  | `save_item` RPC (atomic insert + tag upsert + links)                                           | M5          | Atomic save; PostgREST can't upsert on `lower(name)`                                         | Multi-request client save, with partial-failure risk |
-| A3  | Tag filter = item has **all** selected tags                                                    | M1/M6       | Narrows results as tags are added; usual expectation                                         | ANY                                                  |
-| A4  | FTS config `simple` (no stemming)                                                              | M1          | Works for mixed English/Arabic content; `english` stems English only                         | `english`                                            |
-| A5  | Root URL normalizes without the trailing slash; URLs with credentials are rejected             | M2          | Consistent with the "remove trailing slash" rule; avoids storing passwords                   | Keep root `/`; strip credentials                     |
-| A6  | Embeds only for YouTube, stored as provider + id (amended by A19); X/Instagram no embed        | M3          | No untrusted HTML; MV3 pages can't run provider scripts anyway                               | Sanitized provider HTML                              |
-| A7  | US-1 fallback if Supabase can't allow unverified sign-in (S0 Q3)                               | M4          | The platform may not support the PRD behavior                                                | Option (a): confirm before first sign-in             |
-| A8  | `alarms` permission only if S0 Q5 shows the worker must refresh tokens                         | M4          | Extra permission beyond PRD 7.2                                                              | Not added                                            |
-| A9  | No CSS framework; CSS variables + CSS modules                                                  | M4          | Popup < 300 ms; no new dependency                                                            | Tailwind                                             |
-| A10 | Re-saving an existing URL does not merge new tags/note                                         | M5          | Simple, matches D3 "opens the existing item"                                                 | Merge                                                |
-| A11 | Manual `db:push` to Supabase Cloud (no CI auto-migrate)                                        | M1          | No stored DB password in CI; v1 scale                                                        | CI job on `main`                                     |
-| A12 | Add `tags.created_at` (not in PRD 6)                                                           | M1          | Stable sort in the tag manager; no cost                                                      | Omit; sort tags by name                              |
-| A13 | `search_items` takes `p_no_folder boolean`; it can't be combined with `p_folder_id`            | M1/M6       | Items left by a deleted folder must be findable; a flag is clearer than a sentinel id        | Sentinel `p_folder_id`; no filter                    |
-| A14 | Search matches word prefixes: input → `to_tsvector('simple')` lexemes → `lexeme:*` ANDed       | M1          | Search-as-you-type (`reac` finds "React"); keeps the GIN index; no raw input in `to_tsquery` | `websearch_to_tsquery` (whole words); `pg_trgm`      |
-| A15 | Column-level update allowlists; `url`/`normalized_url` immutable after save                    | M1          | New columns stay locked by default; keeps the duplicate rule sound                           | Revoke `user_id` only                                |
-| A16 | Column-level insert allowlists; clients can't set `id`, `user_id`, timestamps, `search_vector` | M1/M5       | Same holes closed on insert; `save_item` (security invoker) inherits them                    | RLS `with check` only                                |
-| A17 | The database trusts the client's `normalized_url` (checks only `^https?://` and length)        | M1          | One normalizer in `packages/domain`; a bad value only affects its author (RLS)               | Re-implement the normalizer in SQL                   |
-| A18 | Length caps: URLs 2048, title 500, description 2000, site_name 200; preview API truncates      | M1/M3       | Bounds storage on the free tier and FTS vector size                                          | No caps beyond note and names                        |
-| A19 | `embed_html` replaced by `embed_provider` enum (`youtube`) + validated `embed_id`              | M1/M2/M3/M6 | No markup stored, so nothing to sanitize; each surface builds its own embed                  | Store template HTML (A6 as first approved)           |
-| A20 | A query with no lexemes is treated as no query (normal list)                                   | M1          | Typing punctuation shouldn't empty the library                                               | Return no results                                    |
+| #   | Proposal                                                                                                                                                          | Where       | Why                                                                                                       | Rejected alternative                                 |
+| --- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------- | --------------------------------------------------------------------------------------------------------- | ---------------------------------------------------- |
+| A1  | Add `items.favicon_url`, filled by the preview API                                                                                                                | M1/M3/M5    | US-9 requires a favicon; the alternative needs the extra `favicon` permission                             | No favicon overlay; placeholder only                 |
+| A2  | `save_item` RPC (atomic insert + tag upsert + links)                                                                                                              | M5          | Atomic save; PostgREST can't upsert on `lower(name)`                                                      | Multi-request client save, with partial-failure risk |
+| A3  | Tag filter = item has **all** selected tags                                                                                                                       | M1/M6       | Narrows results as tags are added; usual expectation                                                      | ANY                                                  |
+| A4  | FTS config `simple` (no stemming)                                                                                                                                 | M1          | Works for mixed English/Arabic content; `english` stems English only                                      | `english`                                            |
+| A5  | Root URL normalizes without the trailing slash; URLs with credentials are rejected                                                                                | M2          | Consistent with the "remove trailing slash" rule; avoids storing passwords                                | Keep root `/`; strip credentials                     |
+| A6  | Embeds only for YouTube, stored as provider + id (amended by A19); X/Instagram no embed                                                                           | M3          | No untrusted HTML; MV3 pages can't run provider scripts anyway                                            | Sanitized provider HTML                              |
+| A7  | US-1 fallback if Supabase can't allow unverified sign-in (S0 Q3)                                                                                                  | M4          | The platform may not support the PRD behavior                                                             | Option (a): confirm before first sign-in             |
+| A8  | `alarms` permission only if S0 Q5 shows the worker must refresh tokens                                                                                            | M4          | Extra permission beyond PRD 7.2                                                                           | Not added                                            |
+| A9  | No CSS framework; CSS variables + CSS modules                                                                                                                     | M4          | Popup < 300 ms; no new dependency                                                                         | Tailwind                                             |
+| A10 | Re-saving an existing URL does not merge new tags/note                                                                                                            | M5          | Simple, matches D3 "opens the existing item"                                                              | Merge                                                |
+| A11 | Manual `db:push` to Supabase Cloud (no CI auto-migrate)                                                                                                           | M1          | No stored DB password in CI; v1 scale                                                                     | CI job on `main`                                     |
+| A12 | Add `tags.created_at` (not in PRD 6)                                                                                                                              | M1          | Stable sort in the tag manager; no cost                                                                   | Omit; sort tags by name                              |
+| A13 | `search_items` takes `p_no_folder boolean`; it can't be combined with `p_folder_id`                                                                               | M1/M6       | Items left by a deleted folder must be findable; a flag is clearer than a sentinel id                     | Sentinel `p_folder_id`; no filter                    |
+| A14 | Search matches word prefixes: input → `to_tsvector('simple')` lexemes → `lexeme:*` ANDed                                                                          | M1          | Search-as-you-type (`reac` finds "React"); keeps the GIN index; no raw input in `to_tsquery`              | `websearch_to_tsquery` (whole words); `pg_trgm`      |
+| A15 | Column-level update allowlists; `url`/`normalized_url` immutable after save                                                                                       | M1          | New columns stay locked by default; keeps the duplicate rule sound                                        | Revoke `user_id` only                                |
+| A16 | Column-level insert allowlists; clients can't set `id`, `user_id`, timestamps, `search_vector`                                                                    | M1/M5       | Same holes closed on insert; `save_item` (security invoker) inherits them                                 | RLS `with check` only                                |
+| A17 | The database trusts the client's `normalized_url` (checks only `^https?://` and length)                                                                           | M1          | One normalizer in `packages/domain`; a bad value only affects its author (RLS)                            | Re-implement the normalizer in SQL                   |
+| A18 | Length caps: URLs 2048, title 500, description 2000, site_name 200; preview API truncates                                                                         | M1/M3       | Bounds storage on the free tier and FTS vector size                                                       | No caps beyond note and names                        |
+| A19 | `embed_html` replaced by `embed_provider` enum (`youtube`) + validated `embed_id`                                                                                 | M1/M2/M3/M6 | No markup stored, so nothing to sanitize; each surface builds its own embed                               | Store template HTML (A6 as first approved)           |
+| A20 | A query with no lexemes is treated as no query (normal list)                                                                                                      | M1          | Typing punctuation shouldn't empty the library                                                            | Return no results                                    |
+| A21 | `normalizeUrl` returns `url` + `normalizedUrl`; errors `invalid`, `unsupported_scheme`, `has_credentials`, `too_long`                                             | M2/M5       | "Open original" keeps the saved link; the UI can say why a link was rejected                              | One `url` output; two error codes                    |
+| A22 | `parseUserUrl` prefixes `https://` to scheme-less paste input that looks like a host                                                                              | M2/M5       | `example.com/post` is a common paste (US-5); `normalizeUrl` stays strict                                  | Reject scheme-less input                             |
+| A23 | Tracking list: `utm_*`, `fbclid`, `gclid`, `dclid`, `gbraid`, `wbraid`, `msclkid`, `igsh`, `igshid`, `mc_cid`, `mc_eid`; `si` on YouTube hosts only               | M2          | Instagram/YouTube share links must dedupe; rows keep their saved key (A17), so the list is near-permanent | PRD list only                                        |
+| A24 | No provider-aware merging (`youtu.be` vs `youtube.com`, `twitter.com` vs `x.com`); `www.` kept                                                                    | M2          | Keeps the normalizer generic; merging is a separate rule set (PLAN "Later")                               | Merge provider aliases                               |
+| A25 | The query is edited as raw text; remaining pairs kept byte for byte; no percent-encoding normalization                                                            | M2          | `URLSearchParams` re-serializes values (`%20` → `+`), breaking rule 8                                     | `searchParams.delete()`                              |
+| A26 | `detectProvider`, `extractYouTubeId` and `YOUTUBE_ID_PATTERN` live in `packages/domain`                                                                           | M2/M3/M6    | M3 adapters and M6 embeds share one rule, the same as the M1 check                                        | Regex inside the M3 adapters                         |
+| A27 | Media type: oEmbed `photo` → `image`; reels → `post`; `rich` and `og:type` `music.*`/`profile`/`website` decide nothing                                           | M2          | One consistent type per provider; no guesses from generic tags                                            | Reels → `video`; `rich` → `post`                     |
+| A28 | Tags per item max 20; names trimmed, inner whitespace collapsed, no commas; duplicates removed case-insensitively (first spelling kept)                           | M2/M5       | The database enforces none of these; dedupe instead of failing a save                                     | Fail on duplicates; no cap                           |
+| A29 | `note`/`title` empty after trim → `null` (cleared)                                                                                                                | M2/M5/M6    | One meaning for "no value"; schemas never output `""`                                                     | Keep `""`                                            |
+| A30 | One exported `LIMITS` object (title 300, description 1000, siteName 200, note 1000, url 2048, name 100, tags 20)                                                  | M2/M3       | Every schema and the preview API's truncation use the same numbers; M1 caps (A18) stay ceilings           | Per-schema literals                                  |
+| A31 | Client factory only at `@markme/domain/client`; options `url`, `anonKey`, `storage`, `detectSessionInUrl`; `pkce`, auto refresh, persist session fixed; no `lock` | M2/M4       | The preview API never loads `supabase-js`; no surface can pick a setting S0 ruled out                     | Root export; pass-through options                    |
+| A32 | `@vitest/coverage-v8`; the domain `test` script always runs coverage (100% for `src/url/**`)                                                                      | M2          | The exit needs a gate; the existing CI `test` check enforces it without a new job                         | Separate coverage job                                |
+| A33 | `httpUrl` schema built on `normalizeUrl`                                                                                                                          | M2/M3/M5    | One set of URL rules; `z.url()` accepts URLs the normalizer rejects                                       | `z.url()`                                            |
+| A34 | `mediaType`, `previewStatus`, `embedProvider` built from `Constants` in `@markme/database`                                                                        | M2          | Enums cannot drift from the migrations                                                                    | Copy the values                                      |
+| A35 | `previewError` schema in `packages/domain`                                                                                                                        | M2/M3/M5    | The client parses M3 error codes from the same source                                                     | Codes only in M3                                     |
+| A36 | One commit per Spec Kit task; one PR per user story into the milestone branch                                                                                     | all         | Reviews whole stories; fewer PRs; matches how M1 ran                                                      | One PR per task                                      |
 
 A1, A3 and A7 are in PRD v1.1. S0 Q3 showed Supabase cannot allow unverified password sign-in, so
 A7 option (a) applies; the constitution was amended to match (v1.1.1, Auth line).
@@ -1412,6 +1527,9 @@ Clerk and rejected it: the free plan fixes sessions at 7 days (weekly forced sig
 sign-in in an extension needs a Sync Host web app, and production needs a paid domain. Supabase
 Auth stays.
 
+A21–A36 come from the M2 design review (2026-10-22) and were approved by Mostafa the same day.
+They settle the M2 open items (root slash, credentials, max tags, `www.`).
+
 ---
 
 ## 5. Traceability matrix
@@ -1423,7 +1541,7 @@ Auth stays.
 | US-2 Sign in/out, persistence                              | M4-T4, M4-T7, M4-T9           | E2E sign-in, sign-out storage test, manual restart                    |
 | US-3 `chrome.storage` session                              | M4-T2                         | adapter tests                                                         |
 | US-4 Save current page                                     | M5-T3, M5-T6, M5-T9           | save component tests, E2E save                                        |
-| US-5 Save pasted URL                                       | M2-T1, M5-T3                  | `normalize.test.ts`, invalid URL test                                 |
+| US-5 Save pasted URL                                       | M2-US1, M5-T3                 | `normalize.test.ts`, `parse-user-url.test.ts`, invalid URL test       |
 | US-6 Organize on save                                      | M5-T1, M5-T4                  | `080-save-item.test.sql`, tag combobox tests                          |
 | US-7 Context menu (optional)                               | M8-T1                         | context menu tests                                                    |
 | US-8 Preview display                                       | M3-T4–T6, M5-T7               | parser/oEmbed tests, `PreviewCard` tests                              |
@@ -1437,7 +1555,7 @@ Auth stays.
 | US-16 Tags                                                 | M1-T3/T4, M5-T4, M7-T4        | `040`/`060` pgTAP, tag manager tests                                  |
 | D1 One folder, many tags                                   | M1-T4                         | schema + `050`/`060`                                                  |
 | D2 Generic metadata + oEmbed                               | M3-T4, M3-T5                  | parser + oEmbed tests                                                 |
-| D3 No duplicates                                           | M1-T4, M2-T1, M5-T1, M5-T5    | unique constraint test, normalizer, already-saved test                |
+| D3 No duplicates                                           | M1-T4, M2-US1, M5-T1, M5-T5   | unique constraint test, normalizer, already-saved test                |
 | D4 Preview lifecycle (on save, refresh, stored, 24h cache) | M3-T6, M3-T7, M5-T6, M5-T8    | cache + limiter tests                                                 |
 | D5 FTS                                                     | M1-T6                         | `070-search.test.sql`                                                 |
 | D6 No Realtime in v1                                       | all                           | no Realtime subscription in code (review check)                       |
@@ -1457,6 +1575,7 @@ Auth stays.
   `item_rules`, `items_updated_at`, `search_vector`, `search_items`) instead of five monolithic
   files; product rules and search split across US2/US3 PRs. Task list aligned to T001–T022 and
   one PR per user story for M1.
+- v1.6 (2026-10-22): M2 design review: A21–A36 approved and applied to M2 (normalizer outputs and error codes, paste helper, tracking list, raw query editing, provider helpers, media-type edge rules, tag rules, `LIMITS`, enums from `Constants`, `previewError`, client subpath, coverage gate); one PR per user story (§1.5). Review follow-ups: `parseUserUrl` scheme rule and example table; M2 depends on M0 + M1; `itemUpdate.tagIds` capped; M3 maps `httpUrl` failures to `invalid_url` and normalizes once; M4 factory call and M5 paste field match M2.
 - v1.5 (2026-10-20): M1 `/speckit-plan` changes (`specs/002-m1-database-schema/research.md`):
   - Explicit revokes for Supabase's default grants (anon, TRUNCATE, EXECUTE).
   - A `private` schema for internal functions, with security-definer vector refresh.
