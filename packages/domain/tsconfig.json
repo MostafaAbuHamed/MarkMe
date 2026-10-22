@@ -1,4 +1,7 @@
 {
   "extends": "@markme/config/tsconfig/base.json",
+  "compilerOptions": {
+    "lib": ["ES2023", "DOM"]
+  },
   "include": ["src", "vitest.config.ts"]
 }
