@@ -58,7 +58,9 @@ begin
     from pg_catalog.unnest(p_tag_ids) as tag_id;
   end if;
 
-  -- Each lexeme is a quoted prefix literal: backslash escaped, quotes doubled.
+  -- Split on the same separators as private.search_words, so a dotted or hyphenated
+  -- query matches the indexed parts. Each lexeme is a quoted prefix literal:
+  -- backslash escaped, quotes doubled.
   select pg_catalog.string_agg(
     ''''
       || pg_catalog.replace(
@@ -71,7 +73,10 @@ begin
   )
   into v_terms
   from pg_catalog.unnest(
-    pg_catalog.to_tsvector('simple', coalesce(p_query, ''))
+    pg_catalog.to_tsvector(
+      'simple',
+      pg_catalog.translate(coalesce(p_query, ''), '/:.?=&_-', '        ')
+    )
   ) as lex(lexeme, positions, weights);
 
   if v_terms is null then

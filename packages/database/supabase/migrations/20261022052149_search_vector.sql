@@ -1,3 +1,19 @@
+-- Splits text on URL separators before tokenizing. search_items applies the same
+-- translate to the query; keep the two separator lists identical.
+create function private.search_words(p_text text)
+returns tsvector
+language sql
+immutable
+set search_path = ''
+as $$
+  select to_tsvector(
+    'simple',
+    translate(coalesce(p_text, ''), '/:.?=&_-', '        ')
+  );
+$$;
+
+revoke execute on function private.search_words(text) from public, anon, authenticated;
+
 create function private.item_search_vector(
   p_item_id uuid,
   p_title text,
@@ -11,31 +27,21 @@ stable
 set search_path = ''
 as $$
   select
-    setweight(to_tsvector('simple', coalesce(p_title, '')), 'A')
+    setweight(private.search_words(p_title), 'A')
     || setweight(
-      to_tsvector(
-        'simple',
-        coalesce(
-          (
-            select string_agg(tags.name, ' ')
-            from public.item_tags
-            join public.tags on tags.id = item_tags.tag_id
-            where item_tags.item_id = p_item_id
-          ),
-          ''
+      private.search_words(
+        (
+          select string_agg(tags.name, ' ')
+          from public.item_tags
+          join public.tags on tags.id = item_tags.tag_id
+          where item_tags.item_id = p_item_id
         )
       ),
       'B'
     )
-    || setweight(to_tsvector('simple', coalesce(p_note, '')), 'B')
-    || setweight(to_tsvector('simple', coalesce(p_description, '')), 'C')
-    || setweight(
-      to_tsvector(
-        'simple',
-        coalesce(translate(p_url, '/:.?=&_-', '        '), '')
-      ),
-      'D'
-    );
+    || setweight(private.search_words(p_note), 'B')
+    || setweight(private.search_words(p_description), 'C')
+    || setweight(private.search_words(p_url), 'D');
 $$;
 
 revoke execute on function private.item_search_vector(uuid, text, text, text, text)

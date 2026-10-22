@@ -4,7 +4,7 @@ begin;
 -- Schema guard for the current US1 state.
 -- Widen a grant → this file must change on purpose.
 
-select plan(84);
+select plan(86);
 
 -- Tables and columns (data-model.md, post-T009).
 
@@ -638,6 +638,24 @@ select set_eq(
 );
 
 -- Search vector upkeep (T015). Clients cannot execute the builder or the triggers.
+
+select function_privs_are(
+  'private',
+  'search_words',
+  array['text'],
+  'anon',
+  '{}',
+  'anon has no privileges on private.search_words(text)'
+);
+
+select function_privs_are(
+  'private',
+  'search_words',
+  array['text'],
+  'authenticated',
+  '{}',
+  'authenticated has no privileges on private.search_words(text)'
+);
 
 select function_privs_are(
   'private',

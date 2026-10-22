@@ -1,6 +1,6 @@
 begin;
 \ir helpers/identity.psql
-select plan(63);
+select plan(70);
 
 -- Part 1: search vector upkeep. Match with to_tsquery('simple', …), run as A.
 -- now() is fixed for this transaction, so postgres backdates updated_at before the
@@ -302,6 +302,11 @@ values
     'Temporary'
   ),
   (
+    'aaaaaaaa-0000-0000-0000-000000000006',
+    pg_temp.user_a(),
+    'self-hosted'
+  ),
+  (
     'bbbbbbbb-0000-0000-0000-000000000001',
     pg_temp.user_b(),
     'cedar'
@@ -501,7 +506,7 @@ from (
       'padding_2',
       'https://example.com/mm-19',
       'Filler two',
-      null::text,
+      'Long-term plan',
       null::text,
       null::uuid,
       '2024-06-19 00:00:00+00'::timestamptz
@@ -511,14 +516,14 @@ from (
       'https://example.com/mm-20',
       'Filler three',
       null::text,
-      null::text,
+      'Mirror on gitlab.io',
       null::uuid,
       '2024-06-20 00:00:00+00'::timestamptz
     ),
     (
       'padding_4',
       'https://example.com/mm-21',
-      'Filler four',
+      'Filler four node.js',
       null::text,
       null::text,
       null::uuid,
@@ -626,6 +631,7 @@ from (
     ('syrup', 'aaaaaaaa-0000-0000-0000-000000000001'::uuid),
     ('bread', 'aaaaaaaa-0000-0000-0000-000000000004'::uuid),
     ('padding_1', 'aaaaaaaa-0000-0000-0000-000000000005'::uuid),
+    ('padding_5', 'aaaaaaaa-0000-0000-0000-000000000006'::uuid),
     ('b_pineapple', 'bbbbbbbb-0000-0000-0000-000000000002'::uuid),
     ('b_react', 'bbbbbbbb-0000-0000-0000-000000000001'::uuid)
 ) as t(key, tag_id)
@@ -677,6 +683,51 @@ select results_eq(
   $$select id from public.search_items(p_query => 'webpack', p_limit => 50)$$,
   $$select id from search_fixture where key = 'webpack'$$,
   'a url-word-only item is found'
+);
+
+-- Query and fields split on the same separators, so dotted or hyphenated words match
+-- in the URL and keep matching in every other field.
+
+select results_eq(
+  $$select id from public.search_items(p_query => 'webpack-guide', p_limit => 50)$$,
+  $$select id from search_fixture where key = 'webpack'$$,
+  'webpack-guide finds the item whose url has it'
+);
+
+select results_eq(
+  $$select id from public.search_items(p_query => 'example.com/webpack', p_limit => 50)$$,
+  $$select id from search_fixture where key = 'webpack'$$,
+  'example.com/webpack finds the item whose url has it'
+);
+
+select results_eq(
+  $$select id from public.search_items(p_query => 'node.js', p_limit => 50)$$,
+  $$select id from search_fixture where key = 'padding_4'$$,
+  'node.js finds the item whose title has it'
+);
+
+select results_eq(
+  $$select id from public.search_items(p_query => 'long-term', p_limit => 50)$$,
+  $$select id from search_fixture where key = 'padding_2'$$,
+  'long-term finds the item whose description has it'
+);
+
+select results_eq(
+  $$select id from public.search_items(p_query => 'gitlab.io', p_limit => 50)$$,
+  $$select id from search_fixture where key = 'padding_3'$$,
+  'gitlab.io finds the item whose note has it'
+);
+
+select results_eq(
+  $$select id from public.search_items(p_query => 'self-hosted', p_limit => 50)$$,
+  $$select id from search_fixture where key = 'padding_5'$$,
+  'self-hosted finds the item whose tag has it'
+);
+
+select results_eq(
+  $$select id from public.search_items(p_query => 'js', p_limit => 50)$$,
+  $$select id from search_fixture where key = 'padding_4'$$,
+  'js finds the item whose title has node.js'
 );
 
 select set_eq(
