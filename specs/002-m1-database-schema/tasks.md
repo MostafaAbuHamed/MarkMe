@@ -554,7 +554,7 @@ migrations, and the README explains how.
     `export type SearchItemRow = Database["public"]["Functions"]["search_items"]["Returns"][number];`
     It needs an `import type { Database }`.
   - Proof: `pnpm typecheck && pnpm lint` pass. Add no other runtime code.
-- [ ] T018 [P] [US4] Root script in `/package.json`: `"db:push": "supabase db push --workdir
+- [x] T018 [P] [US4] Root script in `/package.json`: `"db:push": "supabase db push --workdir
 packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --help` resolves
       to the CLI. Never add it to CI (A11).
 - [ ] T019 [US4] `/README.md` "Database" section (FR-032; contract database-package "README"):

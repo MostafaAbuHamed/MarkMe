@@ -20,7 +20,8 @@
     "db:reset": "supabase db reset --workdir packages/database",
     "db:test": "supabase test db --workdir packages/database",
     "db:types": "supabase gen types typescript --local --workdir packages/database > packages/database/src/types.gen.ts && prettier --write packages/database/src/types.gen.ts",
-    "db:new": "supabase migration new --workdir packages/database"
+    "db:new": "supabase migration new --workdir packages/database",
+    "db:push": "supabase db push --workdir packages/database"
   },
   "devDependencies": {
     "@markme/config": "workspace:*",
