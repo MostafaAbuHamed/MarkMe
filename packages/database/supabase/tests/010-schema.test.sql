@@ -4,7 +4,7 @@ begin;
 -- Schema guard for the current US1 state.
 -- Widen a grant → this file must change on purpose.
 
-select plan(81);
+select plan(84);
 
 -- Tables and columns (data-model.md, post-T009).
 
@@ -716,6 +716,35 @@ select has_index(
   'items',
   'items_search_vector_idx',
   'items has index items_search_vector_idx'
+);
+
+-- Search RPC (T016). authenticated may execute; anon and public may not.
+
+select function_privs_are(
+  'public',
+  'search_items',
+  array['text', 'uuid', 'boolean', 'uuid[]', 'int', 'int'],
+  'authenticated',
+  array['EXECUTE'],
+  'authenticated may execute public.search_items(text, uuid, boolean, uuid[], int, int)'
+);
+
+select function_privs_are(
+  'public',
+  'search_items',
+  array['text', 'uuid', 'boolean', 'uuid[]', 'int', 'int'],
+  'anon',
+  '{}',
+  'anon has no privileges on public.search_items(text, uuid, boolean, uuid[], int, int)'
+);
+
+select function_privs_are(
+  'public',
+  'search_items',
+  array['text', 'uuid', 'boolean', 'uuid[]', 'int', 'int'],
+  'public',
+  '{}',
+  'public has no privileges on public.search_items(text, uuid, boolean, uuid[], int, int)'
 );
 
 select * from finish();

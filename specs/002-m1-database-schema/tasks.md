@@ -476,7 +476,7 @@ row`.
   - Append to `tests/010-schema.test.sql`:
     - `function_privs_are`, no client execute, for the four functions.
     - `has_index` for `items_search_vector_idx`.
-- [ ] T016 [US3] Search RPC: append to `tests/070-search.test.sql` (part 2: search behavior), then
+- [x] T016 [US3] Search RPC: append to `tests/070-search.test.sql` (part 2: search behavior), then
       migration `search_items`.
   - **Tests**. Seed a fixed collection for A and a look-alike one for B:
     - Ranking: title match ranks above description-only match.
