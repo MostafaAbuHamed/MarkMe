@@ -433,7 +433,7 @@ every US3 scenario, and stays current as items and tags change.
 
 **Branch**: `m1/us3-search` from `002-m1-database-schema` after PR 2 merged.
 
-- [ ] T015 [US3] Search vector: test `tests/070-search.test.sql` (part 1: vector upkeep), then
+- [x] T015 [US3] Search vector: test `tests/070-search.test.sql` (part 1: vector upkeep), then
       migration `search_vector` (A4, R5, R6).
   - **Tests**. Use `search_vector @@ to_tsquery('simple', '<word>')`, run as A:
     - A new item matches a word from its title, description, note and URL. For the URL,

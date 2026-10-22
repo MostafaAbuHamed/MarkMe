@@ -4,7 +4,7 @@ begin;
 -- Schema guard for the current US1 state.
 -- Widen a grant → this file must change on purpose.
 
-select plan(72);
+select plan(81);
 
 -- Tables and columns (data-model.md, post-T009).
 
@@ -635,6 +635,87 @@ select set_eq(
       and has_column_privilege('authenticated', a.attrelid, a.attnum, 'UPDATE')
   $$,
   'items_set_updated_at fires on exactly the columns authenticated may update'
+);
+
+-- Search vector upkeep (T015). Clients cannot execute the builder or the triggers.
+
+select function_privs_are(
+  'private',
+  'item_search_vector',
+  array['uuid', 'text', 'text', 'text', 'text'],
+  'anon',
+  '{}',
+  'anon has no privileges on private.item_search_vector(uuid, text, text, text, text)'
+);
+
+select function_privs_are(
+  'private',
+  'item_search_vector',
+  array['uuid', 'text', 'text', 'text', 'text'],
+  'authenticated',
+  '{}',
+  'authenticated has no privileges on private.item_search_vector(uuid, text, text, text, text)'
+);
+
+select function_privs_are(
+  'private',
+  'items_set_search_vector',
+  '{}',
+  'anon',
+  '{}',
+  'anon has no privileges on private.items_set_search_vector()'
+);
+
+select function_privs_are(
+  'private',
+  'items_set_search_vector',
+  '{}',
+  'authenticated',
+  '{}',
+  'authenticated has no privileges on private.items_set_search_vector()'
+);
+
+select function_privs_are(
+  'private',
+  'item_tags_refresh_vector',
+  '{}',
+  'anon',
+  '{}',
+  'anon has no privileges on private.item_tags_refresh_vector()'
+);
+
+select function_privs_are(
+  'private',
+  'item_tags_refresh_vector',
+  '{}',
+  'authenticated',
+  '{}',
+  'authenticated has no privileges on private.item_tags_refresh_vector()'
+);
+
+select function_privs_are(
+  'private',
+  'tags_refresh_vectors',
+  '{}',
+  'anon',
+  '{}',
+  'anon has no privileges on private.tags_refresh_vectors()'
+);
+
+select function_privs_are(
+  'private',
+  'tags_refresh_vectors',
+  '{}',
+  'authenticated',
+  '{}',
+  'authenticated has no privileges on private.tags_refresh_vectors()'
+);
+
+select has_index(
+  'public',
+  'items',
+  'items_search_vector_idx',
+  'items has index items_search_vector_idx'
 );
 
 select * from finish();
