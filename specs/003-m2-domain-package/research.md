@@ -80,7 +80,10 @@ from the implementation plan and are copied back into it in this change (its cha
   1. trim + parse → `invalid`;
   2. `protocol` not `http:`/`https:` → `unsupported_scheme`;
   3. credentials → `has_credentials`;
-  4. `url.href.length > 2048` or `normalizedUrl.length > 2048` → `too_long`.
+  4. `url.href.length > 2048` → `too_long`. `normalizedUrl` is built only by removing parts of
+     `href` (trailing `/`, segments, fragment, default `?`), so it is never longer. One check
+     caps both outputs, and the 100% branch gate has no dead branch. The boundary test asserts
+     both lengths.
 - `url` (the "open original" value) is `href` as parsed: tracking parameters and fragment kept.
 - Lengths count UTF-16 code units (`string.length`). After the WHATWG parse a URL is ASCII, so
   this equals Postgres `char_length`, which the M1 check uses.
@@ -194,9 +197,19 @@ from the implementation plan and are copied back into it in this change (its cha
 - **Tests** (`factory.test.ts`), with no network:
   - `vi.mock('@supabase/supabase-js', …)` wraps the real `createClient` in a `vi.fn` that calls
     through, so the test can assert the exact `auth` object and still get a real client.
-  - Storage: an in-memory `AuthStorage` with spy methods. A stored, unexpired session written
-    under the key the client asks for (taken from the first `getItem` call, not hard-coded) is
-    returned by `auth.getSession()`, and `auth.signOut({ scope: 'local' })` calls `removeItem`.
+  - Storage: an in-memory `AuthStorage` with spy methods, and project URL
+    `https://abcdefghijklmnop.supabase.co`. supabase-js derives the default key from the first
+    host label, `sb-abcdefghijklmnop-auth-token`; the test asserts `getItem` was called with it.
+    - Read: an unexpired session stored under that key is returned by `auth.getSession()`, with
+      no fetch.
+    - Write: an expired session makes `getSession()` refresh, and `setItem` receives the new
+      token.
+    - Remove: `auth.signOut({ scope: 'local' })` calls `removeItem`.
+
+    `globalThis.fetch` is stubbed (`vi.stubGlobal`) **before** the client is created, because
+    supabase-js captures `fetch` at creation. The refresh and logout calls hit the stub, never
+    the network.
+
   - Two calls → `not.toBe`.
 - **Isolation** (SC-005): `src/index.ts` never imports `src/client/`. Two guards:
   - a test that `vi.mock`s `@supabase/supabase-js` with a factory that throws, then imports
