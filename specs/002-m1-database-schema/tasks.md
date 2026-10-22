@@ -544,7 +544,7 @@ migrations, and the README explains how.
 
 **Branch**: `m1/us4-shared-schema` from `002-m1-database-schema` after PR 3 merged.
 
-- [ ] T017 [P] [US4] Package exports in `/packages/database/src/index.ts` (contract
+- [x] T017 [P] [US4] Package exports in `/packages/database/src/index.ts` (contract
       database-package, R11):
   - Re-export:
     - `export type { Database, Json, Tables, TablesInsert, TablesUpdate, Enums } from
