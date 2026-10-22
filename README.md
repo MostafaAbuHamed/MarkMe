@@ -108,8 +108,23 @@ All commands run from the repo root.
 | `pnpm db:test`       | `supabase test db --workdir packages/database`                                                                                                                  | pgTAP                                                                       |
 | `pnpm db:types`      | `supabase gen types typescript --local --workdir packages/database > packages/database/src/types.gen.ts && prettier --write packages/database/src/types.gen.ts` | Committed output; CI checks drift                                           |
 | `pnpm db:new <name>` | `supabase migration new --workdir packages/database`                                                                                                            |                                                                             |
+| `pnpm db:push`       | `supabase db push --workdir packages/database`                                                                                                                  | Manual; never in CI                                                         |
 
-`db:push` is not available yet. It is added in M1, when a cloud project exists.
+## Database
+
+Local: `pnpm db:reset` rebuilds the local DB from migrations and seed; `pnpm db:test` runs the pgTAP files.
+
+To add a migration, run `pnpm db:new <name>`, write the SQL (with its pgTAP test), then `pnpm db:reset && pnpm db:test`, then `pnpm db:types`, then commit the migration and `packages/database/src/types.gen.ts` together, or CI's `db` job fails on drift. Never edit a migration that has already merged; fix forward with a new one.
+
+When you add an item column later, grant it on purpose with column-level `grant insert` and `grant update`, as the items migration does; add it to the `items_set_updated_at` trigger column list if clients may edit it, and update the `010-schema` privilege assertions. If the column should be searchable, recreate `private.item_search_vector` and the `items_search_vector` trigger with it in a new migration (see `packages/database/supabase/migrations/*_search_vector.sql`).
+
+One-time cloud link: `pnpm exec supabase login`, then `pnpm exec supabase link --project-ref <ref> --workdir packages/database`. The ref is stored in git-ignored `packages/database/supabase/.temp/`.
+
+Push with `pnpm db:push`. It prompts for the DB password unless `SUPABASE_DB_PASSWORD` is set in the shell. The password never goes into a file or CI.
+
+Verify with `pnpm exec supabase migration list --linked --workdir packages/database`: Local and Remote should show the same versions.
+
+A paused free project must be resumed from the Supabase dashboard before link or push.
 
 ## Repository layout
 
@@ -121,7 +136,7 @@ packages/database/   Supabase project: config, migrations, seed, generated types
 packages/domain/     Shared schemas and domain code
 scripts/             Local start script (pnpm dev) and its tests
 docs/                Product requirements and plans
-specs/               Spec Kit specs (current: 001-m0-monorepo-foundation)
+specs/               Spec Kit specs (current: 002-m1-database-schema)
 ```
 
 ## Docs

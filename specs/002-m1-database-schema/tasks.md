@@ -557,7 +557,7 @@ migrations, and the README explains how.
 - [x] T018 [P] [US4] Root script in `/package.json`: `"db:push": "supabase db push --workdir
 packages/database"`, next to the other `db:*` scripts. Proof: `pnpm db:push --help` resolves
       to the CLI. Never add it to CI (A11).
-- [ ] T019 [US4] `/README.md` "Database" section (FR-032; contract database-package "README"):
+- [x] T019 [US4] `/README.md` "Database" section (FR-032; contract database-package "README"):
   - Local: `pnpm db:reset`, `pnpm db:test`.
   - Adding a migration: `pnpm db:new <name>`, then `pnpm db:types`, then commit both, or CI's
     drift check fails.
