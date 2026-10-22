@@ -433,7 +433,7 @@ every US3 scenario, and stays current as items and tags change.
 
 **Branch**: `m1/us3-search` from `002-m1-database-schema` after PR 2 merged.
 
-- [ ] T015 [US3] Search vector: test `tests/070-search.test.sql` (part 1: vector upkeep), then
+- [x] T015 [US3] Search vector: test `tests/070-search.test.sql` (part 1: vector upkeep), then
       migration `search_vector` (A4, R5, R6).
   - **Tests**. Use `search_vector @@ to_tsquery('simple', '<word>')`, run as A:
     - A new item matches a word from its title, description, note and URL. For the URL,
@@ -476,7 +476,7 @@ row`.
   - Append to `tests/010-schema.test.sql`:
     - `function_privs_are`, no client execute, for the four functions.
     - `has_index` for `items_search_vector_idx`.
-- [ ] T016 [US3] Search RPC: append to `tests/070-search.test.sql` (part 2: search behavior), then
+- [x] T016 [US3] Search RPC: append to `tests/070-search.test.sql` (part 2: search behavior), then
       migration `search_items`.
   - **Tests**. Seed a fixed collection for A and a look-alike one for B:
     - Ranking: title match ranks above description-only match.

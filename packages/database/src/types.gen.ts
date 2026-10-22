@@ -197,7 +197,37 @@ export type Database = {
       [_ in never]: never;
     };
     Functions: {
-      [_ in never]: never;
+      search_items: {
+        Args: {
+          p_folder_id?: string;
+          p_limit?: number;
+          p_no_folder?: boolean;
+          p_offset?: number;
+          p_query?: string;
+          p_tag_ids?: string[];
+        };
+        Returns: {
+          created_at: string;
+          description: string;
+          embed_id: string;
+          embed_provider: Database["public"]["Enums"]["embed_provider"];
+          favicon_url: string;
+          folder_id: string;
+          id: string;
+          image_url: string;
+          media_type: Database["public"]["Enums"]["media_type"];
+          normalized_url: string;
+          note: string;
+          preview_fetched_at: string;
+          preview_status: Database["public"]["Enums"]["preview_status"];
+          rank: number;
+          site_name: string;
+          tags: Json;
+          title: string;
+          updated_at: string;
+          url: string;
+        }[];
+      };
     };
     Enums: {
       embed_provider: "youtube";
