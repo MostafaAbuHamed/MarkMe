@@ -17,5 +17,6 @@ export const ERROR_STATUS: Record<PreviewErrorCode, number> = {
 };
 
 export function sendError(res: Response, code: PreviewErrorCode): void {
+  res.locals.error = code;
   res.status(ERROR_STATUS[code]).json({ error: code });
 }
