@@ -1,6 +1,11 @@
 import express, { type Express } from "express";
 
-export function createApp(): Express {
+import type { PreviewApiEnv } from "./env.js";
+
+export type AppOptions = { env: PreviewApiEnv };
+
+export function createApp({ env }: AppOptions): Express {
+  void env;
   const app = express();
   app.disable("x-powered-by");
 

@@ -121,7 +121,8 @@ these.
       - `CORS_ORIGINS="a://x, b://y"` → `["a://x","b://y"]` (split on commas, trimmed, empty
         parts dropped).
       - Each `RATE_LIMIT_*` set to `"0"`, `"-1"` or `"abc"` throws `EnvError`.
-      - `META_OEMBED_TOKEN=""` throws `EnvError` (it must be non-empty when set).
+      - A blank `META_OEMBED_TOKEN` is unset (`parseEnv` treats blank values as missing), and
+        `"t"` is kept.
     - `test/errors.test.ts`: `ERROR_STATUS` maps `invalid_url`→400, `unauthorized`→401,
       `blocked_target`→422, `rate_limited`→429, `fetch_failed`→502 and `timeout`→504. Its keys
       equal `PREVIEW_ERROR_CODES` exactly. `new PreviewFailure("timeout").code === "timeout"`.
