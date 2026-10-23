@@ -267,7 +267,8 @@ every SSRF case is green and no `it.fails` or `it.todo` remains.
     - Export `allowAll: AddressPolicy = () => false` from `test/helpers/policy.ts`, **not** from
       `src/`.
   - **Done when**: `pnpm --filter @markme/preview-api exec vitest run test/ip-policy.test.ts`
-    passes. Gate check (do not commit): make `loopback` allowed, then confirm the suite fails.
+    passes. Gate check (do not commit): skip both the `range()` check and the
+    CIDR list, then confirm the suite fails (either layer alone still blocks).
   - **Commit**: `feat(preview-api): add IPv4/IPv6 address policy for SSRF (T005)`.
 
 - [ ] T006 [US1] Write the five `safe-fetch` suites before the fetcher exists (constitution III,

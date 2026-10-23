@@ -31,8 +31,10 @@ Expected:
 - Blocked targets end as `blocked_target`, slow targets as `timeout`, and oversized or wrong-type
   bodies as `fetch_failed`.
 
-Gate check (do not commit): in `src/ssrf/ip-policy.ts`, temporarily allow `loopback`, then rerun.
-`ip-policy.test.ts` must fail. Restore the file.
+Gate check (do not commit): in `src/ssrf/ip-policy.ts`, temporarily make `isBlockedAddress` return
+`false` for every valid IP (skip both the `range()` check and the CIDR list), then rerun.
+`ip-policy.test.ts` must fail. Restore the file. Disabling only one layer is not enough, because
+the other still blocks.
 
 ## V2. Parsing, oEmbed and endpoint behaviour (SC-003–SC-006)
 
