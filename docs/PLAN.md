@@ -3,7 +3,7 @@
 |        |                                                                                        |
 | ------ | -------------------------------------------------------------------------------------- |
 | Owner  | Mostafa                                                                                |
-| Status | Draft v1.4                                                                             |
+| Status | Draft v1.5                                                                             |
 | Date   | 2026-10-17                                                                             |
 | Input  | [PRD.md](PRD.md) (approved), [constitution](../.specify/memory/constitution.md) v1.1.1 |
 | Detail | [IMPLEMENTATION_PLAN.md](IMPLEMENTATION_PLAN.md): technical design per milestone       |
@@ -86,10 +86,10 @@ M3 and M4 can run in parallel. M2 uses M1's generated types and enums, so it sta
 - Pipeline: validate -> cache -> oEmbed (YouTube, X, Instagram) -> HTML metadata (OG, Twitter Cards, meta) -> sanitize -> cache 24h.
 - Each oEmbed provider is optional: if it is unavailable (e.g. Instagram needs a Meta app token), fall back to HTML metadata.
 - Full SSRF protections (PRD 7.3): scheme/port, DNS resolve + IP blocklist v4/v6, connect to validated IP, re-check each redirect, 3 redirects, 5 s, 2 MB, content-type allowlist, no cookies, fixed UA.
-- Per-user and per-IP rate limits; forced-refresh flag rate-limited.
+- Per-user and per-IP rate limits (IP before auth); forced-refresh flag rate-limited.
 - Cache and rate limits are in memory for v1 (per instance, lost on scale-to-zero). The M3 plan records this choice and the Cloud Run max-instances setting.
 - Embeds only from allowlisted providers, returned as provider + validated id, never HTML.
-- Deployed to Cloud Run from CI (walking skeleton), with secrets in the host's secret store.
+- Deployed to Cloud Run (`europe-west1`) from CI (walking skeleton), with no secrets yet (any later one goes in from the host's secret store via `--set-secrets`); a manual dispatch deploys from the milestone branch for the exit check.
 - **Tests (written before the fetcher):** SSRF suite (private IPs, rebinding, internal redirects), limits, content types, parsing fixtures, oEmbed, rate limits.
 - **Exit:** all SSRF cases blocked in CI; image builds; runs locally via `pnpm dev`; deployed endpoint answers with a valid JWT and rejects SSRF cases.
 
@@ -185,6 +185,7 @@ Run the OAuth/oEmbed spike, and write the `/speckit-specify` input for **M0 Mono
 
 ## Changelog
 
+- v1.5 (2026-10-23): M3 bullets updated for the M3 design review (IMPLEMENTATION_PLAN §4 A37–A50).
 - v1.4 (2026-10-22): one PR per user story (IMPLEMENTATION_PLAN A36); provider-aware URL merging added to Later (A24); M2 depends on M0 + M1.
 - v1.3 (2026-10-20): M1 and M3 bullets updated for the M1 design review (IMPLEMENTATION_PLAN §4 A13–A20).
 - v1.2 (2026-10-17): linked IMPLEMENTATION_PLAN.md (technical design, tasks, spike S0 steps).
