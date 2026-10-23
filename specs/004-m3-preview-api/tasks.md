@@ -284,12 +284,16 @@ every SSRF case is green and no `it.fails` or `it.todo` remains.
       `SafeFetch` and `createSafeFetch(deps)`. Calling the returned function throws
       `new Error("not implemented")`.
   - **Helpers**:
-    - `servers.ts`: `startServer(handler)` → `{ url, port, close, requests }`. `requests`
-      records each request's method, path and headers. The servers listen on `127.0.0.2:0`. Linux
-      routes all of `127/8` to loopback, and CI runs on Ubuntu. This keeps `127.0.0.1` free to be a
-      blocked redirect target.
-    - `resolver.ts`: `scriptedResolver(answers: Record<host, Answer[][]>)`. Call _n_ for a host
-      returns the _n_-th answer list. The helper also counts calls per host.
+    - `servers.ts`: `startServer(handler, host = "127.0.0.2")` → `{ url, port, close, requests }`.
+      `requests` records each request's method, path and headers. The servers listen on
+      `<host>:0`. Linux routes all of `127/8` to loopback, and CI runs on Ubuntu. This keeps
+      `127.0.0.1` free to be a blocked redirect target. Tests reach a server through a test
+      hostname (`http://a.test:<port>/`) that the scripted resolver maps to the server's address,
+      so the pinned lookup is what makes the connection work.
+    - `resolver.ts`: `scriptedResolver(answers: Record<host, Answer[][] | Error>)`. Call _n_ for a
+      host returns the _n_-th answer list, and the last list again once the script runs out. An
+      `Error` value is thrown on every call. An unknown host throws an `ENOTFOUND` error. The
+      helper also counts calls per host.
     - `policy.ts` (from T005) also exports
       `testFetchDeps(server, resolver, policy = allowAll)`. It returns
       `{ resolve, policy, ports: ["", "80", "443", String(server.port)], onConnect }` and records
@@ -304,13 +308,16 @@ every SSRF case is green and no `it.fails` or `it.todo` remains.
     - **dns** (production `isBlockedAddress`, scripted resolver):
       - `a.test` → `[10.0.0.1]` → `blocked_target`.
       - `[8.8.8.8, 127.0.0.1]` → `blocked_target` (mixed answers).
-      - **Rebinding**: call 1 → `[93.184.215.14]`, call 2 → `[127.0.0.1]`. The fetch uses
-        address `93.184.215.14`: assert through the `onConnect` spy that the
-        resolver ran exactly once. Use `allowAll` for the
-        connection and the production policy for the check.
-      - `[AAAA 2606:4700::1111, A 93.184.215.14]` → connects to `93.184.215.14` (A41).
-      - IPv6-only `[2606:4700::1111]` → connects to the IPv6 address.
+      - **Rebinding** (policy `allowOnly("127.0.0.2")`, no real network): call 1 →
+        `[127.0.0.2]`, call 2 → `[127.0.0.1]`. The fetch succeeds, the server on `127.0.0.2`
+        receives the request, `onConnect` saw only `127.0.0.2`, and the resolver ran exactly
+        once. A second lookup at connect time would have produced `127.0.0.1`.
+      - Prefer IPv4 (A41, `allowAll`): `[AAAA ::1, A 127.0.0.2]` → the server on `127.0.0.2`
+        receives the request, and `onConnect` saw `127.0.0.2`.
+      - IPv6 only (`allowAll`): `[AAAA ::1]` with a server started on `::1` → that server receives
+        the request, and `onConnect` saw `::1`.
       - A resolver that throws `ENOTFOUND` → `fetch_failed`.
+      - Public addresses such as `8.8.8.8` appear only in rows that end before any connection.
     - **redirect**:
       - Setup: a local server on `127.0.0.2`. The policy is
         `allowOnly("127.0.0.2")`, which is the production `isBlockedAddress` except for that one
