@@ -29,7 +29,7 @@ function fetchBlocked(host = "a.com") {
 }
 
 describe("safe fetch scheme and port", () => {
-  it.fails.each(blockedSchemes)("%s is blocked before any lookup", async (url) => {
+  it.each(blockedSchemes)("%s is blocked before any lookup", async (url) => {
     const { resolver, safeFetch } = fetchBlocked();
     const pending = safeFetch(url);
     await expect(pending).rejects.toBeInstanceOf(PreviewFailure);
@@ -37,7 +37,7 @@ describe("safe fetch scheme and port", () => {
     expect(resolver.calls()).toBe(0);
   });
 
-  it.fails.each(blockedPorts)("%s is blocked before any lookup", async (url) => {
+  it.each(blockedPorts)("%s is blocked before any lookup", async (url) => {
     const { resolver, safeFetch } = fetchBlocked();
     const pending = safeFetch(url);
     await expect(pending).rejects.toBeInstanceOf(PreviewFailure);
@@ -45,7 +45,7 @@ describe("safe fetch scheme and port", () => {
     expect(resolver.calls()).toBe(0);
   });
 
-  it.fails.each(allowedPorts)(
+  it.each(allowedPorts)(
     "%s passes the port check and fails closed when DNS throws",
     async (url) => {
       const { resolver, safeFetch } = fetchBlocked();

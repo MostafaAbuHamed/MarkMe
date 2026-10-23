@@ -27,7 +27,7 @@ function safeFetchFor(server: TestServer) {
 }
 
 describe("safe fetch headers", () => {
-  it.fails("sends the fixed user-agent and no cookie or authorization", async () => {
+  it("sends the fixed user-agent and no cookie or authorization", async () => {
     const body = "<p>ok</p>";
     const server = await listen((_req, res) => {
       res.writeHead(200, { "content-type": "text/html; charset=utf-8" });
@@ -50,7 +50,7 @@ describe("safe fetch headers", () => {
     expect(server.requests[0]?.headers.authorization).toBeUndefined();
   });
 
-  it.fails("does not replay Set-Cookie on the next hop", async () => {
+  it("does not replay Set-Cookie on the next hop", async () => {
     const server = await listen((req, res) => {
       if (req.url === "/next") {
         res.writeHead(200, { "content-type": "text/html" });
@@ -74,7 +74,7 @@ describe("safe fetch headers", () => {
     expect(server.requests[1]?.headers.authorization).toBeUndefined();
   });
 
-  it.fails("sends the accept header it was given", async () => {
+  it("sends the accept header it was given", async () => {
     const accept = "text/html,application/xhtml+xml";
     const server = await listen((_req, res) => {
       res.writeHead(200, { "content-type": "text/html" });

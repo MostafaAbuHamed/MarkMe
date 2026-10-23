@@ -45,7 +45,7 @@ async function hosted(handler: ServerHandler): Promise<{
 }
 
 describe("safe fetch redirects", () => {
-  it.fails.each([
+  it.each([
     ["http://127.0.0.1/", "127.0.0.1"],
     ["http://169.254.169.254/latest/meta-data", "169.254.169.254"],
   ])("blocks a redirect to %s", async (location, host) => {
@@ -61,7 +61,7 @@ describe("safe fetch redirects", () => {
     expect(resolver.calls(host)).toBe(0);
   });
 
-  it.fails("blocks a redirect to a host that resolves to a private address", async () => {
+  it("blocks a redirect to a host that resolves to a private address", async () => {
     const { server, resolver, connected, safeFetch } = await hosted((_req, res) => {
       respond(res, 302, { location: "http://internal.test/" });
     });
@@ -74,7 +74,7 @@ describe("safe fetch redirects", () => {
     expect(resolver.calls("internal.test")).toBe(1);
   });
 
-  it.fails("blocks a redirect to ftp", async () => {
+  it("blocks a redirect to ftp", async () => {
     const { server, resolver, connected, safeFetch } = await hosted((_req, res) => {
       respond(res, 302, { location: "ftp://a.com" });
     });
@@ -87,7 +87,7 @@ describe("safe fetch redirects", () => {
     expect(resolver.calls("a.com")).toBe(0);
   });
 
-  it.fails("resolves a relative Location against the current URL and follows it", async () => {
+  it("resolves a relative Location against the current URL and follows it", async () => {
     const { server, safeFetch } = await hosted((req, res) => {
       if (req.url === "/next") {
         respond(res, 200, { "content-type": "text/html" }, "next");
@@ -106,7 +106,7 @@ describe("safe fetch redirects", () => {
     expect(server.requests.map((request) => request.path)).toEqual(["/", "/next"]);
   });
 
-  it.fails("follows three redirects and returns the last hop", async () => {
+  it("follows three redirects and returns the last hop", async () => {
     const { server, safeFetch } = await hosted((req, res) => {
       const steps = ["/", "/1", "/2", "/3"];
       const index = steps.indexOf(req.url ?? "");
@@ -127,7 +127,7 @@ describe("safe fetch redirects", () => {
     expect(server.requests.map((request) => request.path)).toEqual(["/", "/1", "/2", "/3"]);
   });
 
-  it.fails("fails the fetch on a fourth redirect", async () => {
+  it("fails the fetch on a fourth redirect", async () => {
     const { server, safeFetch } = await hosted((req, res) => {
       const steps = ["/", "/1", "/2", "/3", "/4"];
       const index = steps.indexOf(req.url ?? "");

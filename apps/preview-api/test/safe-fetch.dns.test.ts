@@ -40,7 +40,7 @@ function productionFetch(resolver: ScriptedResolver): {
 }
 
 describe("safe fetch DNS", () => {
-  it.fails("blocks a host that resolves to a private address", async () => {
+  it("blocks a host that resolves to a private address", async () => {
     const resolver = scriptedResolver({
       "a.test": [[{ address: "10.0.0.1", family: 4 }]],
     });
@@ -52,7 +52,7 @@ describe("safe fetch DNS", () => {
     expect(connected).toEqual([]);
   });
 
-  it.fails("blocks a lookup that mixes a public address with a loopback address", async () => {
+  it("blocks a lookup that mixes a public address with a loopback address", async () => {
     const resolver = scriptedResolver({
       "a.test": [
         [
@@ -69,7 +69,7 @@ describe("safe fetch DNS", () => {
     expect(connected).toEqual([]);
   });
 
-  it.fails("pins the first lookup when a second lookup would rebind", async () => {
+  it("pins the first lookup when a second lookup would rebind", async () => {
     const server = await listen(html);
     const resolver = scriptedResolver({
       "a.test": [[{ address: "127.0.0.2", family: 4 }], [{ address: "127.0.0.1", family: 4 }]],
@@ -89,7 +89,7 @@ describe("safe fetch DNS", () => {
     expect(resolver.calls("a.test")).toBe(1);
   });
 
-  it.fails("prefers the IPv4 answer when AAAA is listed first", async () => {
+  it("prefers the IPv4 answer when AAAA is listed first", async () => {
     const server = await listen(html);
     const resolver = scriptedResolver({
       "a.test": [
@@ -112,7 +112,7 @@ describe("safe fetch DNS", () => {
     expect(deps.connected).toEqual(["127.0.0.2"]);
   });
 
-  it.fails("connects to IPv6 when the lookup has no IPv4 address", async () => {
+  it("connects to IPv6 when the lookup has no IPv4 address", async () => {
     const server = await listen(html, "::1");
     const resolver = scriptedResolver({
       "a.test": [[{ address: "::1", family: 6 }]],
@@ -130,7 +130,7 @@ describe("safe fetch DNS", () => {
     expect(deps.connected).toEqual(["::1"]);
   });
 
-  it.fails("maps ENOTFOUND to fetch_failed", async () => {
+  it("maps ENOTFOUND to fetch_failed", async () => {
     const resolver = scriptedResolver({ "a.test": enotfound("a.test") });
     const { safeFetch, connected } = productionFetch(resolver);
     const pending = safeFetch("http://a.test/");
