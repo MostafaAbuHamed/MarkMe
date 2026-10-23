@@ -32,8 +32,9 @@ async function fetchFrom(handler: ServerHandler, options?: SafeFetchOptions) {
     "a.test": [[{ address: "127.0.0.2", family: 4 }]],
   });
   const safeFetch = createSafeFetch(testFetchDeps(server, resolver));
+  const url = `http://a.test:${server.port}/`;
   // Wrapped so callers' `await` waits for the server, not for the fetch.
-  return { pending: safeFetch(`http://a.test:${server.port}/`, options) };
+  return { url, pending: safeFetch(url, options) };
 }
 
 function delay(ms: number, res: ServerResponse): Promise<void> {
@@ -48,7 +49,8 @@ function delay(ms: number, res: ServerResponse): Promise<void> {
 
 describe("safe fetch limits", () => {
   it("times out when the body trickles past the deadline", async () => {
-    const server = await startServer((_req, res) => {
+    const started = performance.now();
+    const { pending } = await fetchFrom((_req, res) => {
       res.writeHead(200, { "content-type": "text/html" });
       let sent = 0;
       const timer = setInterval(() => {
@@ -64,13 +66,6 @@ describe("safe fetch limits", () => {
         clearInterval(timer);
       });
     });
-    closers.push(server.close);
-    const resolver = scriptedResolver({
-      "a.test": [[{ address: "127.0.0.2", family: 4 }]],
-    });
-    const safeFetch = createSafeFetch(testFetchDeps(server, resolver));
-    const started = performance.now();
-    const pending = safeFetch(`http://a.test:${server.port}/`);
     await expect(pending).rejects.toBeInstanceOf(PreviewFailure);
     await expect(pending).rejects.toMatchObject({ code: "timeout" });
     const elapsed = performance.now() - started;
@@ -79,20 +74,14 @@ describe("safe fetch limits", () => {
   }, 10_000);
 
   it("times out across three redirects that share one deadline", async () => {
-    const server = await startServer(async (req, res) => {
+    const started = performance.now();
+    const { pending } = await fetchFrom(async (req, res) => {
       await delay(2_000, res);
       if (res.destroyed || res.writableEnded) return;
       const next = `${req.url ?? "/"}x`;
       res.writeHead(302, { location: next });
       res.end();
     });
-    closers.push(server.close);
-    const resolver = scriptedResolver({
-      "a.test": [[{ address: "127.0.0.2", family: 4 }]],
-    });
-    const safeFetch = createSafeFetch(testFetchDeps(server, resolver));
-    const started = performance.now();
-    const pending = safeFetch(`http://a.test:${server.port}/`);
     await expect(pending).rejects.toBeInstanceOf(PreviewFailure);
     await expect(pending).rejects.toMatchObject({ code: "timeout" });
     const elapsed = performance.now() - started;
@@ -143,14 +132,10 @@ describe("safe fetch limits", () => {
 
   it("accepts application/json when the caller allows it", async () => {
     const body = Buffer.from('{"ok":true}');
-    const server = await startServer(page(body, 200, { "content-type": "application/json" }));
-    closers.push(server.close);
-    const resolver = scriptedResolver({
-      "a.test": [[{ address: "127.0.0.2", family: 4 }]],
-    });
-    const safeFetch = createSafeFetch(testFetchDeps(server, resolver));
-    const url = `http://a.test:${server.port}/`;
-    const pending = safeFetch(url, { allowedTypes: ["application/json"] });
+    const { url, pending } = await fetchFrom(
+      page(body, 200, { "content-type": "application/json" }),
+      { allowedTypes: ["application/json"] },
+    );
     await expect(pending).resolves.toMatchObject({
       finalUrl: url,
       status: 200,
@@ -164,7 +149,7 @@ describe("safe fetch limits", () => {
     const totalChunks = 40;
     let chunksWritten = 0;
     let closedEarly = false;
-    const server = await startServer((_req, res) => {
+    const { url, pending } = await fetchFrom((_req, res) => {
       res.writeHead(200, { "content-type": "image/png" });
       const timer = setInterval(() => {
         if (res.destroyed || res.writableEnded) {
@@ -185,13 +170,6 @@ describe("safe fetch limits", () => {
         clearInterval(timer);
       });
     });
-    closers.push(server.close);
-    const resolver = scriptedResolver({
-      "a.test": [[{ address: "127.0.0.2", family: 4 }]],
-    });
-    const safeFetch = createSafeFetch(testFetchDeps(server, resolver));
-    const url = `http://a.test:${server.port}/`;
-    const pending = safeFetch(url);
     await expect(pending).resolves.toMatchObject({
       finalUrl: url,
       status: 200,
@@ -225,16 +203,10 @@ describe("safe fetch limits", () => {
   });
 
   it("maps a connection reset to fetch_failed, not timeout", async () => {
-    const server = await startServer((req: IncomingMessage) => {
+    const started = performance.now();
+    const { pending } = await fetchFrom((req: IncomingMessage) => {
       req.socket.destroy();
     });
-    closers.push(server.close);
-    const resolver = scriptedResolver({
-      "a.test": [[{ address: "127.0.0.2", family: 4 }]],
-    });
-    const safeFetch = createSafeFetch(testFetchDeps(server, resolver));
-    const started = performance.now();
-    const pending = safeFetch(`http://a.test:${server.port}/`);
     await expect(pending).rejects.toBeInstanceOf(PreviewFailure);
     await expect(pending).rejects.toMatchObject({ code: "fetch_failed" });
     expect(performance.now() - started).toBeLessThan(4_000);

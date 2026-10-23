@@ -1,7 +1,7 @@
 import type { LookupOptions } from "node:dns";
 import type { ReadableStreamDefaultReader } from "node:stream/web";
 
-import { Agent, fetch } from "undici";
+import { Agent, fetch, type Response } from "undici";
 
 import { PreviewFailure } from "../errors.js";
 import type { AddressPolicy } from "./ip-policy.js";
@@ -43,81 +43,97 @@ export function createSafeFetch(deps: {
   const resolveSafe = createResolveSafe(deps.resolve, deps.policy);
 
   return async (rawUrl, options = {}) => {
-    const deadlineMs = options.deadlineMs ?? DEFAULT_DEADLINE_MS;
-    const maxBytes = options.maxBytes ?? DEFAULT_MAX_BYTES;
     const maxRedirects = options.maxRedirects ?? DEFAULT_MAX_REDIRECTS;
-    const allowedTypes = options.allowedTypes ?? DEFAULT_ALLOWED_TYPES;
-    const signal = AbortSignal.timeout(deadlineMs);
+    const signal = AbortSignal.timeout(options.deadlineMs ?? DEFAULT_DEADLINE_MS);
 
     try {
       let current = new URL(rawUrl);
       for (let hop = 0; hop <= maxRedirects; hop += 1) {
-        if (current.protocol !== "http:" && current.protocol !== "https:") {
-          throw new PreviewFailure("blocked_target");
-        }
-        if (!ports.includes(current.port)) throw new PreviewFailure("blocked_target");
-
+        assertAllowedTarget(current, ports);
         const target = await untilAborted(resolveSafe(current.hostname), signal);
         deps.onConnect?.(target.address);
 
-        const agent = new Agent({ connect: { lookup: pinnedLookup(target) } });
-        try {
-          const response = await fetch(current, {
-            dispatcher: agent,
-            redirect: "manual",
-            signal,
-            credentials: "omit",
-            headers: requestHeaders(options.accept),
-          });
-
-          if (response.status >= 300 && response.status < 400) {
-            const location = response.headers.get("location");
-            await discard(response);
-            if (location === null || hop === maxRedirects) {
-              throw new PreviewFailure("fetch_failed");
-            }
-            current = new URL(location, current);
-            continue;
-          }
-
-          if (response.status < 200 || response.status >= 300) {
-            await discard(response);
-            throw new PreviewFailure("fetch_failed");
-          }
-
-          const { contentType, charset } = parseContentType(response.headers.get("content-type"));
-          if (contentType === undefined || !typeAllowed(contentType, allowedTypes)) {
-            await discard(response);
-            throw new PreviewFailure("fetch_failed");
-          }
-
-          if (contentType.startsWith("image/")) {
-            await discard(response);
-            return {
-              finalUrl: current.href,
-              status: response.status,
-              contentType,
-              charset,
-              body: new Uint8Array(),
-            };
-          }
-
-          const body = await readBody(response.body, maxBytes, signal);
-          return { finalUrl: current.href, status: response.status, contentType, charset, body };
-        } finally {
-          await agent.close().catch(() => undefined);
-        }
+        const outcome = await fetchHop(current, target, options, signal);
+        if ("result" in outcome) return outcome.result;
+        if (hop === maxRedirects) throw new PreviewFailure("fetch_failed");
+        current = new URL(outcome.redirect, current);
       }
 
       throw new PreviewFailure("fetch_failed");
     } catch (error: unknown) {
-      if (error instanceof PreviewFailure) throw error;
-      if (signal.aborted && isTimeoutReason(signal.reason)) {
-        throw new PreviewFailure("timeout");
-      }
-      throw new PreviewFailure("fetch_failed");
+      throw toPreviewFailure(error, signal);
     }
   };
+}
+
+type HopOutcome = { redirect: string } | { result: SafeFetchResult };
+
+function assertAllowedTarget(url: URL, ports: readonly string[]): void {
+  if (url.protocol !== "http:" && url.protocol !== "https:") {
+    throw new PreviewFailure("blocked_target");
+  }
+  if (!ports.includes(url.port)) throw new PreviewFailure("blocked_target");
+}
+
+async function fetchHop(
+  url: URL,
+  target: ResolvedAddress,
+  options: SafeFetchOptions,
+  signal: AbortSignal,
+): Promise<HopOutcome> {
+  const agent = new Agent({ connect: { lookup: pinnedLookup(target) } });
+  try {
+    const response = await fetch(url, {
+      dispatcher: agent,
+      redirect: "manual",
+      signal,
+      credentials: "omit",
+      headers: requestHeaders(options.accept),
+    });
+
+    if (response.status >= 300 && response.status < 400) {
+      const location = response.headers.get("location");
+      await discard(response);
+      if (location === null) throw new PreviewFailure("fetch_failed");
+      return { redirect: location };
+    }
+    return { result: await readResponse(response, url, options, signal) };
+  } finally {
+    await agent.close().catch(() => undefined);
+  }
+}
+
+async function readResponse(
+  response: Response,
+  url: URL,
+  options: SafeFetchOptions,
+  signal: AbortSignal,
+): Promise<SafeFetchResult> {
+  if (response.status < 200 || response.status >= 300) {
+    await discard(response);
+    throw new PreviewFailure("fetch_failed");
+  }
+
+  const { contentType, charset } = parseContentType(response.headers.get("content-type"));
+  const allowedTypes = options.allowedTypes ?? DEFAULT_ALLOWED_TYPES;
+  if (contentType === undefined || !typeAllowed(contentType, allowedTypes)) {
+    await discard(response);
+    throw new PreviewFailure("fetch_failed");
+  }
+
+  let body: Uint8Array = new Uint8Array();
+  if (contentType.startsWith("image/")) {
+    await discard(response);
+  } else {
+    body = await readBody(response.body, options.maxBytes ?? DEFAULT_MAX_BYTES, signal);
+  }
+  return { finalUrl: url.href, status: response.status, contentType, charset, body };
+}
+
+function toPreviewFailure(error: unknown, signal: AbortSignal): PreviewFailure {
+  if (error instanceof PreviewFailure) return error;
+  if (signal.aborted && isTimeoutReason(signal.reason)) return new PreviewFailure("timeout");
+  return new PreviewFailure("fetch_failed");
 }
 
 function pinnedLookup(target: ResolvedAddress) {
@@ -159,7 +175,7 @@ function parseContentType(header: string | null): {
     if (separator === -1) continue;
     const name = parameter.slice(0, separator).trim().toLowerCase();
     if (name !== "charset" || charset !== undefined) continue;
-    const value = unquote(parameter.slice(separator + 1));
+    const value = unquote(parameter.slice(separator + 1)).toLowerCase();
     if (value !== "") charset = value;
   }
   return { contentType, charset };
@@ -168,9 +184,9 @@ function parseContentType(header: string | null): {
 function unquote(value: string): string {
   const trimmed = value.trim();
   if (trimmed.length >= 2 && trimmed.startsWith('"') && trimmed.endsWith('"')) {
-    return trimmed.slice(1, -1).trim().toLowerCase();
+    return trimmed.slice(1, -1).trim();
   }
-  return trimmed.toLowerCase();
+  return trimmed;
 }
 
 function typeAllowed(contentType: string, allowedTypes: readonly string[]): boolean {
