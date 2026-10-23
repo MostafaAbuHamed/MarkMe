@@ -89,7 +89,7 @@ M3 and M4 can run in parallel. M2 uses M1's generated types and enums, so it sta
 - Per-user and per-IP rate limits (IP before auth); forced-refresh flag rate-limited.
 - Cache and rate limits are in memory for v1 (per instance, lost on scale-to-zero). The M3 plan records this choice and the Cloud Run max-instances setting.
 - Embeds only from allowlisted providers, returned as provider + validated id, never HTML.
-- Deployed to Cloud Run (`europe-west1`) from CI (walking skeleton), with secrets in the host's secret store; a manual dispatch deploys from the milestone branch for the exit check.
+- Deployed to Cloud Run (`europe-west1`) from CI (walking skeleton), with no secrets yet (any later one goes in from the host's secret store via `--set-secrets`); a manual dispatch deploys from the milestone branch for the exit check.
 - **Tests (written before the fetcher):** SSRF suite (private IPs, rebinding, internal redirects), limits, content types, parsing fixtures, oEmbed, rate limits.
 - **Exit:** all SSRF cases blocked in CI; image builds; runs locally via `pnpm dev`; deployed endpoint answers with a valid JWT and rejects SSRF cases.
 
