@@ -131,7 +131,12 @@ export interface SafeFetchResult {
   body: Uint8Array; // empty for image/*: never read (A39)
 }
 export type SafeFetch = (url: string, options?: SafeFetchOptions) => Promise<SafeFetchResult>;
-export function createSafeFetch(deps: { resolve: Resolver; policy: AddressPolicy }): SafeFetch;
+export function createSafeFetch(deps: {
+  resolve: Resolver;
+  policy: AddressPolicy;
+  ports?: readonly string[]; // default ["", "80", "443"]; tests only (R6)
+  onConnect?: (address: string) => void; // test spy for the pinned address
+}): SafeFetch;
 
 // errors.ts
 export class PreviewFailure extends Error {

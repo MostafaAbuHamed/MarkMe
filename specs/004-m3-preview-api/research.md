@@ -162,8 +162,13 @@ this change (v1.9), as its change rule requires.
 - **Decision**:
   - `createSafeFetch({ resolve, policy, ... })`. Production builds it with
     `dns.promises.lookup(host, { all: true, verbatim: true })` and `isBlockedAddress`.
-  - Tests inject a resolver (scripted answers, for rebinding and mixed answers) and, for the
-    limits suites only, `allowAll` so that `127.0.0.1` test servers are reachable.
+  - Tests inject a resolver (scripted answers, for rebinding and mixed answers). Suites that
+    need a live target also inject `allowAll` plus `ports` holding the test server's port. Local
+    servers listen on `127.0.0.1` with a random port, which the default port rule (80/443 only)
+    would refuse.
+  - `onConnect` is a spy that reports the pinned address, which the rebinding case asserts.
+  - The `scheme-port` suite and the production-policy cases always use the default `ports` and
+    `isBlockedAddress`. Neither seam is reachable from env or `server.ts`.
   - `createApp` takes the same options. `server.ts` never reads a policy from env.
   - The production policy has its own suite, which asserts that loopback is blocked (FR-029).
 - **Rationale**: The SSRF suites must reach local servers without weakening production. The seam
@@ -346,3 +351,23 @@ this change (v1.9), as its change rule requires.
     caught.
 - **Alternatives considered**: `it.todo` (no assertions exist before the fetcher); committing red
   tests (breaks the required `test` check).
+
+## R17. `workflow_dispatch` only works once the workflow file is on `main` (found in `/speckit-tasks`)
+
+- **Finding**: GitHub runs `workflow_dispatch` (UI or `gh workflow run`) only for workflow files
+  that exist on the default branch. Once the file is there, a dispatch may pick another ref, and it
+  runs that ref's copy of the file. A47 plans an exit-check deploy from `004-m3-preview-api`
+  before the milestone merges. While `deploy-preview-api.yml` exists only on the milestone branch,
+  that dispatch cannot be started.
+- **Decision (proposed, needs Mostafa's approval at T017)**: Once the US4 PR has merged into the
+  milestone branch, open a small PR to `main` that adds only `deploy-preview-api.yml`. It must
+  pass the same five checks.
+  - On `main` the file does nothing until the repository variables exist. Its `push` path filter
+    (`apps/preview-api/**`, `packages/domain/**`, `pnpm-lock.yaml`) does not match the workflow
+    file itself.
+  - After that, the exit check dispatches it with `ref: 004-m3-preview-api`. The WIF condition
+    already accepts `refs/heads/NNN-*` (A47).
+- **Alternatives considered**: Add `push` on `NNN-*` branches (deploys every milestone push, not
+  approved in A47); deploy by hand with `gcloud` from the laptop (skips the CI path the exit check
+  is meant to prove); defer the cloud exit check until after the merge (breaks "merge only when
+  exit criteria pass").
