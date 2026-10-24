@@ -177,7 +177,7 @@ WXT_PREVIEW_API_URL: "http://127.0.0.1:8787" }`; the preview-api row is unchange
   - **Done when**: `pnpm --filter @markme/extension test`, `pnpm exec vitest run --dir scripts`,
     `pnpm typecheck`, `pnpm lint` pass; `git grep -nI ANON_KEY -- apps scripts` prints only the
     `.env.example` "Replaces WXT_SUPABASE_ANON_KEY" comment and the `ANON_KEY` lines of the
-    dev-env status fixture.
+    dev-env status fixture and tests, plus `apps/preview-api/README.md` (fixed in T008).
   - **Commit**: `feat(extension): configure the publishable key instead of the anon key (T003)`.
 
 - [ ] T004 [US1] Run quickstart L1–L3 on the local stack (depends on T002, T003). No code change.

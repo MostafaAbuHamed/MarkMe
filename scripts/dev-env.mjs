@@ -1,12 +1,12 @@
 import { writeFile } from "node:fs/promises";
 
-const STATUS_KEYS = ["API_URL", "ANON_KEY"];
+const STATUS_KEYS = ["API_URL", "PUBLISHABLE_KEY"];
 
 /**
  * Allowlist parse of `supabase status -o env` text.
- * Only `API_URL` and `ANON_KEY` are read. One pair of surrounding double quotes is stripped.
+ * Only `API_URL` and `PUBLISHABLE_KEY` are read. One pair of surrounding double quotes is stripped.
  * @param {string} text
- * @returns {{ API_URL: string, ANON_KEY: string }}
+ * @returns {{ API_URL: string, PUBLISHABLE_KEY: string }}
  */
 export function parseStatusEnv(text) {
   /** @type {Partial<Record<(typeof STATUS_KEYS)[number], string>>} */
@@ -20,7 +20,7 @@ export function parseStatusEnv(text) {
     }
 
     const key = line.slice(0, separator);
-    if (key !== "API_URL" && key !== "ANON_KEY") {
+    if (key !== "API_URL" && key !== "PUBLISHABLE_KEY") {
       continue;
     }
 
@@ -39,14 +39,14 @@ export function parseStatusEnv(text) {
 
   return {
     API_URL: /** @type {string} */ (found.API_URL),
-    ANON_KEY: /** @type {string} */ (found.ANON_KEY),
+    PUBLISHABLE_KEY: /** @type {string} */ (found.PUBLISHABLE_KEY),
   };
 }
 
 /**
  * Map allowlisted status values onto one app's env keys.
  * @param {string} app
- * @param {{ API_URL: string, ANON_KEY: string }} status
+ * @param {{ API_URL: string, PUBLISHABLE_KEY: string }} status
  * @returns {Record<string, string>}
  */
 export function appEnvValues(app, status) {
@@ -57,7 +57,7 @@ export function appEnvValues(app, status) {
   if (app === "extension") {
     return {
       WXT_SUPABASE_URL: status.API_URL,
-      WXT_SUPABASE_ANON_KEY: status.ANON_KEY,
+      WXT_SUPABASE_PUBLISHABLE_KEY: status.PUBLISHABLE_KEY,
       WXT_PREVIEW_API_URL: "http://127.0.0.1:8787",
     };
   }
