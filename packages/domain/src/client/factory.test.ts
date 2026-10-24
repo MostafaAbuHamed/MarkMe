@@ -10,7 +10,7 @@ import { createClient } from "@supabase/supabase-js";
 import { createMarkMeClient, type AuthStorage, type MarkMeClient } from "./factory";
 
 const PROJECT_URL = "https://abcdefghijklmnop.supabase.co";
-const ANON_KEY = "anon";
+const PUBLISHABLE_KEY = "sb_publishable_test_00000000000000000000";
 const STORAGE_KEY = "sb-abcdefghijklmnop-auth-token";
 const USER_ID = "550e8400-e29b-41d4-a716-446655440000";
 
@@ -91,13 +91,13 @@ describe("createMarkMeClient", () => {
     { name: "passes detectSessionInUrl: true through", detectSessionInUrl: true, expected: true },
   ])("$name with the fixed auth options", ({ detectSessionInUrl, expected }) => {
     const { storage } = createMemoryStorage();
-    const opts = { url: PROJECT_URL, anonKey: ANON_KEY, storage };
+    const opts = { url: PROJECT_URL, publishableKey: PUBLISHABLE_KEY, storage };
 
     trackClient(
       createMarkMeClient(detectSessionInUrl === undefined ? opts : { ...opts, detectSessionInUrl }),
     );
 
-    expect(createClient).toHaveBeenCalledWith(PROJECT_URL, ANON_KEY, {
+    expect(createClient).toHaveBeenCalledWith(PROJECT_URL, PUBLISHABLE_KEY, {
       auth: {
         storage,
         flowType: "pkce",
@@ -110,7 +110,7 @@ describe("createMarkMeClient", () => {
 
   it("does not pass through extra auth options", () => {
     const { storage } = createMemoryStorage();
-    const opts = { url: PROJECT_URL, anonKey: ANON_KEY, storage };
+    const opts = { url: PROJECT_URL, publishableKey: PUBLISHABLE_KEY, storage };
     const lock = vi.fn();
 
     trackClient(createMarkMeClient({ ...opts, lock } as never));
@@ -131,7 +131,7 @@ describe("createMarkMeClient", () => {
     map.set(STORAGE_KEY, JSON.stringify(makeSession(accessToken, expiresAt)));
 
     const client = trackClient(
-      createMarkMeClient({ url: PROJECT_URL, anonKey: ANON_KEY, storage }),
+      createMarkMeClient({ url: PROJECT_URL, publishableKey: PUBLISHABLE_KEY, storage }),
     );
 
     const { data } = await client.auth.getSession();
@@ -168,7 +168,7 @@ describe("createMarkMeClient", () => {
     map.set(STORAGE_KEY, JSON.stringify(makeSession("old-access-token", expiresAt)));
 
     const client = trackClient(
-      createMarkMeClient({ url: PROJECT_URL, anonKey: ANON_KEY, storage }),
+      createMarkMeClient({ url: PROJECT_URL, publishableKey: PUBLISHABLE_KEY, storage }),
     );
 
     await client.auth.getSession();
@@ -190,7 +190,7 @@ describe("createMarkMeClient", () => {
     map.set(STORAGE_KEY, JSON.stringify(makeSession("stored-access-token", expiresAt)));
 
     const client = trackClient(
-      createMarkMeClient({ url: PROJECT_URL, anonKey: ANON_KEY, storage }),
+      createMarkMeClient({ url: PROJECT_URL, publishableKey: PUBLISHABLE_KEY, storage }),
     );
 
     await client.auth.signOut({ scope: "local" });
@@ -203,7 +203,7 @@ describe("createMarkMeClient", () => {
     const storageB = createMemoryStorage();
     const expiresAt = Math.floor(Date.now() / 1000) + 3600;
     storageA.map.set(STORAGE_KEY, JSON.stringify(makeSession("token-a", expiresAt)));
-    const opts = { url: PROJECT_URL, anonKey: ANON_KEY };
+    const opts = { url: PROJECT_URL, publishableKey: PUBLISHABLE_KEY };
 
     const clientA = trackClient(createMarkMeClient({ ...opts, storage: storageA.storage }));
     const clientB = trackClient(createMarkMeClient({ ...opts, storage: storageB.storage }));
