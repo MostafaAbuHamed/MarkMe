@@ -136,3 +136,27 @@ jobs:
           name: gitleaks-report
           path: ${{ runner.temp }}/gitleaks.sarif
           retention-days: 7
+
+  preview-api-image:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+      - name: Build preview API image
+        run: docker build -f apps/preview-api/Dockerfile -t markme-preview .
+      - name: Run and verify preview API container
+        run: |
+          set -euo pipefail
+          trap 'docker rm -f mp 2>/dev/null || true' EXIT
+          docker run -d --name mp -p 8080:8080 \
+            -e PORT=8080 \
+            -e SUPABASE_URL=http://127.0.0.1:54321 \
+            markme-preview
+          for _ in $(seq 1 20); do
+            if curl -fsS http://127.0.0.1:8080/healthz; then
+              break
+            fi
+            sleep 1
+          done
+          curl -fsS http://127.0.0.1:8080/healthz
+          test "$(docker inspect -f '{{.Config.User}}' mp)" = node
