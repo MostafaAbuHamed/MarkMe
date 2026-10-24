@@ -250,3 +250,179 @@ describe("POST /v1/preview", () => {
     expect(response.headers["access-control-allow-origin"]).toBeUndefined();
   });
 });
+
+const rateLimitEnv = loadEnv({
+  SUPABASE_URL: "http://127.0.0.1:54321",
+  CORS_ORIGINS: "chrome-extension://ok",
+  RATE_LIMIT_IP_PER_MIN: "5",
+  RATE_LIMIT_USER_PER_MIN: "3",
+  RATE_LIMIT_USER_PER_DAY: "4",
+  RATE_LIMIT_FORCE_PER_HOUR: "2",
+});
+
+function assertRateLimitHeaders(headers: Record<string, unknown>): void {
+  expect(headers.ratelimit).toBeTypeOf("string");
+  expect(headers["ratelimit-policy"]).toBeTypeOf("string");
+}
+
+function assertRetryAfter(headers: Record<string, unknown>): void {
+  const seconds = Number(headers["retry-after"]);
+  expect(Number.isInteger(seconds)).toBe(true);
+  expect(seconds).toBeGreaterThan(0);
+}
+
+describe("rate limits", () => {
+  it("returns 429 on the 6th request from one IP without a token", async () => {
+    const { safeFetch, baseUrl } = await okTargetServer();
+    const app = createApp({ env: rateLimitEnv, jwks, safeFetch });
+
+    for (let i = 0; i < 5; i++) {
+      const response = await request(app)
+        .post("/v1/preview")
+        .set("Content-Type", "application/json")
+        .send({ url: baseUrl });
+      expect(response.status).toBe(401);
+      assertRateLimitHeaders(response.headers);
+    }
+
+    const limited = await request(app)
+      .post("/v1/preview")
+      .set("Content-Type", "application/json")
+      .send({ url: baseUrl });
+
+    expect(limited.status).toBe(429);
+    expect(limited.body).toEqual({ error: "rate_limited" });
+    assertRetryAfter(limited.headers);
+    assertRateLimitHeaders(limited.headers);
+  });
+
+  it("returns 429 on the 4th request per user per minute; a second user is still served", async () => {
+    const { safeFetch, baseUrl } = await okTargetServer();
+    const app = createApp({ env: rateLimitEnv, jwks, safeFetch });
+
+    for (let i = 0; i < 3; i++) {
+      const response = await authedPost(app, { url: baseUrl });
+      expect(response.status).toBe(200);
+      assertRateLimitHeaders(response.headers);
+    }
+
+    const limited = await authedPost(app, { url: baseUrl });
+    expect(limited.status).toBe(429);
+    expect(limited.body).toEqual({ error: "rate_limited" });
+    assertRetryAfter(limited.headers);
+    assertRateLimitHeaders(limited.headers);
+
+    const otherUser = await request(app)
+      .post("/v1/preview")
+      .set("Content-Type", "application/json")
+      .set("Authorization", `Bearer ${await signToken({ sub: "user-2" })}`)
+      .send({ url: baseUrl });
+
+    expect(otherUser.status).toBe(200);
+    assertRateLimitHeaders(otherUser.headers);
+  });
+
+  it("enforces the per-user daily limit even when the per-minute limit is high", async () => {
+    const dayEnv = loadEnv({
+      SUPABASE_URL: "http://127.0.0.1:54321",
+      CORS_ORIGINS: "chrome-extension://ok",
+      RATE_LIMIT_IP_PER_MIN: "100",
+      RATE_LIMIT_USER_PER_MIN: "100",
+      RATE_LIMIT_USER_PER_DAY: "4",
+      RATE_LIMIT_FORCE_PER_HOUR: "100",
+    });
+    const { safeFetch, baseUrl } = await okTargetServer();
+    const app = createApp({ env: dayEnv, jwks, safeFetch });
+
+    for (let i = 0; i < 4; i++) {
+      const response = await authedPost(app, { url: baseUrl });
+      expect(response.status).toBe(200);
+      assertRateLimitHeaders(response.headers);
+    }
+
+    const limited = await authedPost(app, { url: baseUrl });
+    expect(limited.status).toBe(429);
+    expect(limited.body).toEqual({ error: "rate_limited" });
+    assertRetryAfter(limited.headers);
+    assertRateLimitHeaders(limited.headers);
+  });
+
+  it("counts only force === true toward the force limit", async () => {
+    const forceEnv = loadEnv({
+      SUPABASE_URL: "http://127.0.0.1:54321",
+      CORS_ORIGINS: "chrome-extension://ok",
+      RATE_LIMIT_IP_PER_MIN: "100",
+      RATE_LIMIT_USER_PER_MIN: "100",
+      RATE_LIMIT_USER_PER_DAY: "100",
+      RATE_LIMIT_FORCE_PER_HOUR: "2",
+    });
+    const { safeFetch, baseUrl } = await okTargetServer();
+    const app = createApp({ env: forceEnv, jwks, safeFetch });
+
+    for (let i = 0; i < 2; i++) {
+      const response = await authedPost(app, { url: baseUrl, force: true });
+      expect(response.status).toBe(200);
+      assertRateLimitHeaders(response.headers);
+    }
+
+    const limited = await authedPost(app, { url: baseUrl, force: true });
+    expect(limited.status).toBe(429);
+    expect(limited.body).toEqual({ error: "rate_limited" });
+    assertRetryAfter(limited.headers);
+
+    const notForce = await authedPost(app, { url: baseUrl, force: false });
+    expect(notForce.status).toBe(200);
+    assertRateLimitHeaders(notForce.headers);
+
+    const badForce = await authedPost(app, { url: baseUrl, force: "yes" });
+    expect(badForce.status).toBe(400);
+    expect(badForce.body).toEqual({ error: "invalid_url" });
+    assertRateLimitHeaders(badForce.headers);
+  });
+
+  it("keys IP limits on the last X-Forwarded-For hop when trust proxy is 1", async () => {
+    const { safeFetch, baseUrl } = await okTargetServer();
+    const app = createApp({ env: rateLimitEnv, jwks, safeFetch });
+
+    for (let i = 0; i < 5; i++) {
+      const response = await request(app)
+        .post("/v1/preview")
+        .set("Content-Type", "application/json")
+        .set("X-Forwarded-For", "1.2.3.4, 5.6.7.8")
+        .send({ url: baseUrl });
+      expect(response.status).toBe(401);
+      assertRateLimitHeaders(response.headers);
+    }
+
+    const limited = await request(app)
+      .post("/v1/preview")
+      .set("Content-Type", "application/json")
+      .set("X-Forwarded-For", "9.9.9.9, 5.6.7.8")
+      .send({ url: baseUrl });
+
+    expect(limited.status).toBe(429);
+    expect(limited.body).toEqual({ error: "rate_limited" });
+    assertRetryAfter(limited.headers);
+  });
+
+  it("does not share counters between separate createApp instances", async () => {
+    const { safeFetch, baseUrl } = await okTargetServer();
+    const appA = createApp({ env: rateLimitEnv, jwks, safeFetch });
+    const appB = createApp({ env: rateLimitEnv, jwks, safeFetch });
+
+    for (let i = 0; i < 5; i++) {
+      await request(appA)
+        .post("/v1/preview")
+        .set("Content-Type", "application/json")
+        .send({ url: baseUrl });
+    }
+
+    const stillAllowed = await request(appB)
+      .post("/v1/preview")
+      .set("Content-Type", "application/json")
+      .send({ url: baseUrl });
+
+    expect(stillAllowed.status).toBe(401);
+    assertRateLimitHeaders(stillAllowed.headers);
+  });
+});
