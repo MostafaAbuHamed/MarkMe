@@ -422,6 +422,10 @@ password; **ask Mostafa** before each step. Never create or store a hosted secre
     re-enable legacy keys in the same dashboard section, fix, retry H4.
   - **Done when**: H4 matches H2 and the old anon key is refused. Write the date, the H2 and H4
     results and "legacy keys disabled" under this task.
+  - **Result (2026-10-25)**: legacy JWT-based API keys disabled in the dashboard (H3). H4: hosted
+    sign-in with only the publishable key returned an 802-character token; deployed preview API
+    401 / 200 / 422 / 200 (same as H2); the old hosted anon key now gets 401 on
+    `/auth/v1/settings`. Legacy keys disabled.
   - **Commit**: `docs(keys): record hosted legacy-key cutover (T014)`.
 
 **Checkpoint**: open PR 4 (`keys/us3-hosted-cutover` → `005-supabase-api-keys`). A pause/restore
