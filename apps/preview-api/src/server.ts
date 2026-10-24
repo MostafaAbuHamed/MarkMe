@@ -22,7 +22,7 @@ try {
 
 const port = env.PORT;
 
-const server = createApp().listen(port);
+const server = createApp({ env }).listen(port);
 
 server.on("listening", () => {
   console.log(`preview-api listening on http://127.0.0.1:${port}`);

@@ -3,7 +3,7 @@
 |        |                                                                                                      |
 | ------ | ---------------------------------------------------------------------------------------------------- |
 | Owner  | Mostafa                                                                                              |
-| Status | Draft v1.8                                                                                           |
+| Status | Draft v1.9                                                                                           |
 | Date   | 2026-10-17                                                                                           |
 | Inputs | [PRD.md](PRD.md), [PLAN.md](PLAN.md) v1.1, [constitution](../.specify/memory/constitution.md) v1.1.2 |
 
@@ -147,7 +147,7 @@ Separate workflows: `deploy-preview-api.yml` (M3, on push to `main`, path-filter
 | -------------------- | --------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------- |
 | Domain               | Vitest, table-driven `it.each`                                                                                              | `packages/domain/src/**/*.test.ts`            |
 | Database             | pgTAP via `supabase test db` (+ `basejump-supabase_test_helpers` style helpers written inline, no new dep unless justified) | `packages/database/supabase/tests/*.test.sql` |
-| Preview API          | Vitest + `supertest` + undici `MockAgent`; injected DNS resolver; local `http.createServer` targets                         | `apps/preview-api/test/**`                    |
+| Preview API          | Vitest + `supertest`; fake `SafeFetch` for oEmbed; injected DNS resolver; local `http.createServer` targets                 | `apps/preview-api/test/**`                    |
 | Extension components | Vitest + jsdom + Testing Library + `vitest-axe`; WXT `fakeBrowser` for `chrome.*`                                           | next to components                            |
 | E2E                  | Playwright `chromium.launchPersistentContext` with `--load-extension`                                                       | `apps/extension/e2e/`                         |
 
@@ -862,7 +862,7 @@ Request flow (`src/app.ts`):
 
 ```
 POST /v1/preview  { url, force? }
-  → cors (allowlist) → json body limit 4 KB → IP limiter → auth (JWT) → user limiter (+ force limiter)
+  → cors (allowlist) → IP limiter → json body limit 4 KB → auth (JWT) → user limiter (+ force limiter)
   → zod previewRequest (httpUrl yields { url, normalizedUrl }) → pipeline → zod previewResponse → 200
 Errors: 400 invalid_url | 401 unauthorized | 422 blocked_target | 429 rate_limited | 502 fetch_failed | 504 timeout
 ```
@@ -892,9 +892,11 @@ Error bodies are `{ error: code }` only, never internal details.
 **Docker and deploy**
 
 - `Dockerfile`:
-  - Multi-stage: `node:24-slim` builder runs `pnpm deploy --filter @markme/preview-api --prod`
-    and compiles TS with `tsc` or `tsup`.
-  - Runtime stage `node:24-slim` runs as `USER node`, with `CMD ["node","dist/server.js"]` and a
+  - Multi-stage: `node:24-slim` builder runs `pnpm install --frozen-lockfile` and bundles the
+    service with esbuild into one `dist/server.mjs`. There is no `pnpm deploy` and no
+    `node_modules` in the runtime stage. A `tsc` build cannot run, because `@markme/domain`
+    exports TS source (specs/004 R1).
+  - Runtime stage `node:24-slim` runs as `USER node`, with `CMD ["node","server.mjs"]` (only `dist/server.mjs` is copied) and a
     `HEALTHCHECK` on `/healthz`.
 - GCP project `markme` with billing linked and a **$1 budget alert** (emails at 50/90/100%) (A49).
   A `wizard` script (M3-T9) walks Mostafa through the console-only steps: billing, WIF pool and
@@ -927,10 +929,10 @@ Error bodies are `{ error: code }` only, never internal details.
 | `safe-fetch.scheme-port.test.ts` | `file:`, `ftp:`, `gopher:`, `data:` rejected; ports 22, 8080, 6379 rejected; 80/443 allowed                                                                                                                                                                                                                                                                                                                                                        |
 | `safe-fetch.dns.test.ts`         | Host resolving to private IP blocked; host resolving to mixed public+private blocked; **rebinding**: resolver returns public on first call, private on second → connection still goes to the first validated IP (assert via the injected lookup/connect spy), never a second lookup; AAAA listed before A → connects to the IPv4 address; IPv6-only host → IPv6                                                                                    |
 | `safe-fetch.redirect.test.ts`    | Redirect to `http://127.0.0.1`, to `http://169.254.169.254/latest/meta-data`, to a host resolving private → blocked; 4th redirect → error; relative `Location` resolved; redirect to `ftp:` blocked                                                                                                                                                                                                                                                |
-| `safe-fetch.limits.test.ts`      | Server that trickles bytes past 5 s → 504; 3 MB body → aborted at 2 MB; gzip body under 2 MB that inflates past it → aborted; `application/json`, `application/octet-stream` rejected with the default `allowedTypes`; `application/json` accepted when the caller passes it; `image/png` accepted without body parse; final 404/500 → `fetch_failed`                                                                                              |
+| `safe-fetch.limits.test.ts`      | Server that trickles bytes past 5 s → 504; 3 MB body → aborted at 2 MB; gzip body under 2 MB that inflates past it → aborted; `application/json`, `application/octet-stream` rejected with the default `allowedTypes`; `application/json` accepted when the caller passes it; `image/png` accepted without body parse; 2xx without `Content-Type` → `fetch_failed`; final 404/500 → `fetch_failed`; timeout and other abort told apart             |
 | `safe-fetch.headers.test.ts`     | Request carries fixed UA; no `cookie`/`authorization` header; `Set-Cookie` from target not replayed on redirect                                                                                                                                                                                                                                                                                                                                    |
 | `html-metadata.test.ts`          | Fixtures: OG-complete page, Twitter-only page, bare `<title>`, relative image URLs, malicious `<script>` in title, huge description, missing everything; `windows-1256` page via header and via `<meta charset>`, unknown label → UTF-8; `og:image`/icon on `127.0.0.1`, `[::1]`, `localhost` dropped                                                                                                                                              |
-| `oembed.test.ts`                 | YouTube/X/Instagram via `MockAgent`; provider 4xx/5xx → HTML fallback; Instagram tokenless request has no `access_token`, and adds it when `META_OEMBED_TOKEN` is set; Meta `code 24` → HTML fallback; X/Instagram blockquote text → description; YouTube embed built from ID only (no provider HTML passthrough)                                                                                                                                  |
+| `oembed.test.ts`                 | YouTube/X/Instagram via a fake `SafeFetch` with canned provider JSON; provider 4xx/5xx → HTML fallback; Instagram tokenless request has no `access_token`, and adds it when `META_OEMBED_TOKEN` is set; Meta `code 24` → HTML fallback; X/Instagram blockquote text → description; YouTube embed built from ID only (no provider HTML passthrough)                                                                                                 |
 | `app.test.ts` (supertest)        | No/invalid/expired JWT → 401; valid JWT (signed with a test JWKS) → 200; invalid URL → 400; private target → 422; rate limit per user and per IP → 429 with `Retry-After`; bad-token flood hits the IP limiter; `force` limiter → 429; cache hit doesn't refetch; direct image → `imageUrl` + file-name title; CORS rejects unknown origin, allows no `Origin`; error bodies have no stack; log lines carry the host but no path, query or user id |
 
 Local targets: tests start `http.createServer` on `127.0.0.1` and **temporarily inject an allow-all
@@ -973,6 +975,27 @@ branch).
 
 **Open items:** none. The M3 design review (2026-10-23, A37–A50) settled rate-limit numbers, direct
 image links and JWKS vs HS256.
+
+**`/speckit-plan` changes** (`specs/004-m3-preview-api/research.md`; these replace the text above
+where they differ):
+
+1. The build is an esbuild bundle (`dist/server.mjs`), and the runtime image copies only that
+   file. There is no `tsc` emit and no `pnpm deploy` (R1).
+2. New runtime dependencies are pinned exactly, at versions at least 14 days old: `jose` 6.2.12,
+   `ipaddr.js` 2.5.0, `undici` 8.11.2, `cheerio` 1.2.0, `lru-cache` 11.5.3,
+   `express-rate-limit` 8.7.1. The dev dependency is `esbuild` 0.28.2 (R2).
+3. NAT64, 6to4 and Teredo addresses are blocked outright (`ipaddr.js` never reports them as
+   `unicast`), with no embedded-IPv4 check (R5).
+4. `oembed.test.ts` uses a fake `SafeFetch`, because `MockAgent` cannot reach the pinned per-hop
+   agent (R12).
+5. M3-T2 lands the `safe-fetch` suites as `it.fails` with full bodies against a stub, not as
+   `it.todo` (R16).
+6. CORS is a small in-app middleware, without the `cors` package (R13).
+7. The IP limiter runs before the 4 KB body parser, so oversized or malformed bodies count against
+   the IP bucket too (plan debate, 2026-10-23).
+8. The 5 s deadline is told apart by checking the shared signal (`signal.aborted` with reason
+   `TimeoutError`), not the error undici throws. A 2xx without `Content-Type` → `fetch_failed`
+   (R4).
 
 ---
 
@@ -1610,6 +1633,11 @@ They settle the M3 open items (rate-limit numbers, direct image links, JWKS vs H
 
 ## Changelog
 
+- v1.9 (2026-10-23): M3 `/speckit-plan` changes (`specs/004-m3-preview-api/research.md`):
+  esbuild single-file build; exact dependency pins; NAT64/6to4/Teredo blocked outright; fake
+  `SafeFetch` for oEmbed tests; `it.fails` SSRF suites in T2; in-app CORS; IP limiter before the
+  body parser; timeout read from the signal; missing `Content-Type` → `fetch_failed`; stale
+  `pnpm deploy` and `MockAgent` mentions removed.
 - v1.8 (2026-10-23): M3 design review: A37–A50 approved and applied to M3 (JWKS only, rate-limit numbers and order, direct images, charset, IPv4 preference, private image URLs dropped, host-only logs, CORS default, fetch defaults, `europe-west1`, `workflow_dispatch` deploy with a branch-scoped WIF condition, image cleanup, GCP billing with a budget alert, four user stories); §1.4 env table and §M1 region note updated.
 - v1.7 (2026-10-22): M2 `/speckit-plan` changes (`specs/003-m2-domain-package/research.md`):
   every trailing slash stripped (idempotent key); empty query segments dropped; fixed error order;
