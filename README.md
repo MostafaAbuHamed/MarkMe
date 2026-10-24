@@ -134,7 +134,7 @@ apps/preview-api/    Express preview API ([README](apps/preview-api/README.md))
 packages/config/     Shared TypeScript, ESLint, and Prettier config
 packages/database/   Supabase project: config, migrations, seed, generated types
 packages/domain/     Shared rules: URL normalization, schemas, media types; client factory at @markme/domain/client
-scripts/             Local start script (pnpm dev), GCP setup wizard (`setup-gcp.sh`), and tests
+scripts/             Local start script (pnpm dev) and its tests; `archive/` keeps the retired GCP wizard
 docs/                Product requirements and plans
 specs/               Spec Kit specs (current: 004-m3-preview-api)
 ```

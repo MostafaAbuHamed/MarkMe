@@ -31,7 +31,7 @@ it from Supabase status.
 
 | Key                         | Default                                               | Meaning                                                 |
 | --------------------------- | ----------------------------------------------------- | ------------------------------------------------------- |
-| `PORT`                      | `8787`                                                | TCP port (1–65535). Cloud Run sets this in production.  |
+| `PORT`                      | `8787`                                                | TCP port (1–65535). Docker sets it; Vercel ignores it.  |
 | `SUPABASE_URL`              | _(required)_                                          | Supabase API URL; JWKS and JWT issuer.                  |
 | `CORS_ORIGINS`              | `chrome-extension://dapmmcamlgmaopfaicfjifakodajigha` | Comma-separated browser origins allowed for CORS.       |
 | `RATE_LIMIT_IP_PER_MIN`     | `60`                                                  | Max preview requests per client IP per minute.          |
@@ -123,29 +123,76 @@ docker inspect --format '{{.Config.User}}' mp
 docker stop mp
 ```
 
-The image runs as user `node` and starts `node server.mjs` on `PORT`. Cloud Run sets `PORT=8080`;
-without it the server listens on 8787. `/healthz` needs no Supabase, so the placeholder
+The image runs as user `node` and starts `node server.mjs` on `PORT` (8787 when unset). Production
+runs on Vercel, not this image; the image keeps the service portable to any container host. `/healthz` needs no Supabase, so the placeholder
 `SUPABASE_URL` is enough for this check.
 
-## Deploy (Cloud Run)
+## Deploy (Vercel)
 
-**Needs GCP.** These steps need a Google Cloud account and were not run when this README was written.
+Production runs as one Vercel Function on the free Hobby plan, region `fra1` (Frankfurt, next to
+Supabase). CI ships the esbuild bundle as a prebuilt function, so Vercel never builds from source:
 
-1. Run `bash scripts/setup-gcp.sh` once. The wizard configures the GCP project, Artifact
-   Registry, Workload Identity Federation, deploy and runtime service accounts, and sets five
-   GitHub repository variables: `GCP_PROJECT_ID`, `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA`,
-   `PREVIEW_API_RUNTIME_SA`, `PREVIEW_API_SUPABASE_URL`.
-2. Deploy when `apps/preview-api/**`, `packages/domain/**`, or `pnpm-lock.yaml` changes on
-   `main`, or manually:
+```bash
+pnpm --filter @markme/preview-api build      # dist/server.mjs and dist/vercel/index.mjs
+SUPABASE_URL=https://<ref>.supabase.co node apps/preview-api/scripts/vercel-output.mjs
+```
+
+`vercel-output.mjs` writes `apps/preview-api/.vercel/output` (git-ignored): `index.func` with
+`nodejs24.x`, `regions: ["fra1"]`, `maxDuration: 30` and `SUPABASE_URL` (plus `CORS_ORIGINS` when
+set), and a route that sends every path to it.
+
+Hobby is for personal, non-commercial use. MarkMe will not pay Vercel anything: there is no plan to
+upgrade to a paid Vercel plan. Before MarkMe ships a paid feature, the service moves to another
+host that allows commercial use (constitution; IMPLEMENTATION_PLAN A54).
+
+### One-time setup
+
+**Not run yet.** These steps need a Vercel account (free, no card).
+
+1. Sign up at [vercel.com](https://vercel.com/signup) with GitHub. Do **not** import the repo as a
+   Git project: Git builds would try to build from source and fail.
+2. From `apps/preview-api`, create and link the project:
 
    ```bash
-   gh workflow run deploy-preview-api.yml
+   npx vercel@63.1.2 login
+   npx vercel@63.1.2 link --yes --project markme-preview-api
    ```
 
-The workflow builds and pushes the image, deploys `markme-preview-api` in `europe-west1`, and
-smoke-tests `/healthz` and an unsigned `POST /v1/preview` (expect `401`). Cloud Run runs the
-service as `PREVIEW_API_RUNTIME_SA` (no extra IAM roles) with `SUPABASE_URL` from
-`PREVIEW_API_SUPABASE_URL`.
+   This creates the project if it does not exist. `.vercel/project.json` (git-ignored) now holds
+   `orgId` and `projectId`.
+
+3. Create a token at [vercel.com/account/settings/tokens](https://vercel.com/account/settings/tokens)
+   (scope: your account; set an expiry).
+4. Store it as the only GitHub secret, then set the repository variables:
+
+   ```bash
+   gh secret set VERCEL_TOKEN
+   gh variable set VERCEL_ORG_ID --body '<orgId>'
+   gh variable set VERCEL_PROJECT_ID --body '<projectId>'
+   gh variable set PREVIEW_API_SUPABASE_URL --body 'https://<ref>.supabase.co'
+   gh variable set PREVIEW_API_URL --body 'https://<production domain>'
+   ```
+
+   The production domain is on the project's **Domains** page (usually
+   `markme-preview-api.vercel.app`). Optional: `PREVIEW_API_CORS_ORIGINS`.
+
+### Deploys
+
+The workflow runs when `apps/preview-api/**`, `packages/domain/**`, or `pnpm-lock.yaml` changes on
+`main`, or manually from `main` or a `NNN-*` milestone branch:
+
+```bash
+gh workflow run deploy-preview-api.yml --ref <branch>
+```
+
+It builds, writes `.vercel/output`, runs `vercel deploy --prebuilt --prod`, then smoke-tests
+`PREVIEW_API_URL`: `/healthz` returns `200` and an unsigned `POST /v1/preview` returns `401`. The
+smoke test uses the production domain because per-deployment URLs sit behind Vercel
+Authentication.
+
+Behavior on Vercel: the cache and rate limits live in each instance's memory, and Vercel may run
+more than one instance, so limits are per instance (A53). `trust proxy` stays `1`: Vercel
+overwrites `X-Forwarded-For` with the client IP.
 
 ## Security
 

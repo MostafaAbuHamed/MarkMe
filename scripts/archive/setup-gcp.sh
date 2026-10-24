@@ -199,6 +199,9 @@ finish() {
 # ──────────────────────────────────────────────────────────────────────────
 
 
+# ARCHIVED 2026-10-24, not maintained: the preview API moved to Vercel (docs/IMPLEMENTATION_PLAN.md
+# A51). Kept for reference in case the service moves back to Cloud Run.
+#
 # One-time GCP setup for the preview API deploy (MarkMe M3, T016, quickstart V7).
 # Run from the repo root: bash scripts/setup-gcp.sh
 # Every stage checks before it creates, so a re-run is safe. No step needs or
