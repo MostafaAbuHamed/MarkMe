@@ -106,17 +106,17 @@ the package that owns them (constitution II). Every CLI call goes through root s
 Every app validates its env with a zod schema at startup and fails fast with a readable error.
 Committed `.env.example` files list every key. Real `.env*` files are git-ignored.
 
-| App         | Key                                                                                                        | Notes                                                                               |
-| ----------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
-| extension   | `WXT_SUPABASE_URL`                                                                                         | Local: `http://127.0.0.1:54321`                                                     |
-| extension   | `WXT_SUPABASE_ANON_KEY`                                                                                    | Public anon/publishable key. Never the service-role key                             |
-| extension   | `WXT_PREVIEW_API_URL`                                                                                      | Local: `http://127.0.0.1:8787`                                                      |
-| preview-api | `PORT`                                                                                                     | Default 8787 locally; Docker sets `PORT`; unused on Vercel (A52)                    |
-| preview-api | `SUPABASE_URL`                                                                                             | Used to build the JWKS URL + expected issuer                                        |
-| preview-api | `CORS_ORIGINS`                                                                                             | Comma list; default `chrome-extension://dapmmcamlgmaopfaicfjifakodajigha` (A44)     |
-| preview-api | `RATE_LIMIT_USER_PER_MIN`, `RATE_LIMIT_USER_PER_DAY`, `RATE_LIMIT_IP_PER_MIN`, `RATE_LIMIT_FORCE_PER_HOUR` | Defaults 20 / 300 / 60 / 10 (A38)                                                   |
-| preview-api | `META_OEMBED_TOKEN`                                                                                        | Optional; Instagram oEmbed works tokenless (S0 Q6), a token only raises rate limits |
-| tests only  | `SUPABASE_SERVICE_ROLE_KEY`                                                                                | Only in E2E global setup / seed scripts; never in any app bundle                    |
+| App         | Key                                                                                                        | Notes                                                                                        |
+| ----------- | ---------------------------------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------- |
+| extension   | `WXT_SUPABASE_URL`                                                                                         | Local: `http://127.0.0.1:54321`                                                              |
+| extension   | `WXT_SUPABASE_PUBLISHABLE_KEY`                                                                             | Publishable key (`sb_publishable_…`). Never a secret, service-role or legacy anon key        |
+| extension   | `WXT_PREVIEW_API_URL`                                                                                      | Local: `http://127.0.0.1:8787`                                                               |
+| preview-api | `PORT`                                                                                                     | Default 8787 locally; Docker sets `PORT`; unused on Vercel (A52)                             |
+| preview-api | `SUPABASE_URL`                                                                                             | Used to build the JWKS URL + expected issuer                                                 |
+| preview-api | `CORS_ORIGINS`                                                                                             | Comma list; default `chrome-extension://dapmmcamlgmaopfaicfjifakodajigha` (A44)              |
+| preview-api | `RATE_LIMIT_USER_PER_MIN`, `RATE_LIMIT_USER_PER_DAY`, `RATE_LIMIT_IP_PER_MIN`, `RATE_LIMIT_FORCE_PER_HOUR` | Defaults 20 / 300 / 60 / 10 (A38)                                                            |
+| preview-api | `META_OEMBED_TOKEN`                                                                                        | Optional; Instagram oEmbed works tokenless (S0 Q6), a token only raises rate limits          |
+| tests only  | `SUPABASE_SECRET_KEY`                                                                                      | Secret key (`sb_secret_…`), only in E2E global setup / seed scripts; never in any app bundle |
 
 ### 1.5 Branches, PRs, commits
 
@@ -795,7 +795,7 @@ export interface AuthStorage {
 }
 export function createMarkMeClient(opts: {
   url: string;
-  anonKey: string;
+  publishableKey: string;
   storage: AuthStorage;
   detectSessionInUrl?: boolean; // default false
 }): SupabaseClient<Database>;
@@ -1036,7 +1036,7 @@ where they differ):
 - `src/lib/storage-adapter.ts`: `chromeStorageAdapter: AuthStorage` over `browser.storage.local`
   (survives restarts). Keys are namespaced by the supabase-js `storageKey`.
 - `src/lib/supabase.ts`:
-  - Each entrypoint calls `createMarkMeClient({ url, anonKey, storage: chromeStorageAdapter })`
+  - Each entrypoint calls `createMarkMeClient({ url, publishableKey, storage: chromeStorageAdapter })`
     (M2: the factory fixes PKCE, auto refresh and session persistence, `detectSessionInUrl`
     defaults to `false`, and there is **no `lock` option**; auth-js is lockless since 2.107, S0 Q5)
     once **per surface** (module scope of that entrypoint; not shared across surfaces).
@@ -1332,7 +1332,7 @@ at `pending`.
     word lists, about 3 tags per item.
   - Run with `psql` against local only.
 - **Perf** `scripts/perf-search.mjs`:
-  - Signs in as the perf user (anon key), then runs `search_items` 10× for each of: first page no
+  - Signs in as the perf user (publishable key), then runs `search_items` 10× for each of: first page no
     query, query `"react hooks"`, query + folder, query + 2 tags.
   - Prints medians. Fails if the first page is ≥ 1000 ms or any search is ≥ 500 ms.
   - Optionally checks `explain analyze` to confirm the GIN index is used.
@@ -1485,16 +1485,18 @@ both open, rename a folder in the side panel; the popup's folder list updates.
 - **Perf check:** rerun `perf-popup.mjs` and `perf-search.mjs` with the production build. Record
   the numbers in the README.
 - **Production config:**
-  - `.env.production` (git-ignored) with Cloud Supabase URL + anon key + Vercel preview API URL. The release
+  - `.env.production` (git-ignored) with Cloud Supabase URL + publishable key (GitHub variable
+    `WXT_SUPABASE_PUBLISHABLE_KEY`) + Vercel preview API URL. The release
     workflow gets them from GitHub Actions **variables** (they are public values) and builds with
     `wxt build --mode production`.
   - Vercel `CORS_ORIGINS` = `chrome-extension://<pinned-id>` (repo variable written into the function config).
   - Supabase Cloud Auth: Site URL, redirect allow-list (`https://<id>.chromiumapp.org/**`), Google
     provider client ID/secret (stored in Supabase only), "Confirm email" on (A7 (a)).
-- **Bundle secret check** `scripts/check-bundle-secrets.mjs`:
-  - Scans `.output/chrome-mv3/**` for the env var name `SERVICE_ROLE`, the literal
-    `"role":"service_role"` inside any base64url JWT payload found by regex, and `sb_secret_`
-    prefixes.
+- **Bundle secret check** `scripts/check-bundle-secrets.mjs` (exists since the publishable-key
+  feature):
+  - Scans `.output/chrome-mv3/**` for `sb_secret_` followed by at least 20 key characters, the
+    identifier `SERVICE_ROLE`, and JWT-shaped strings whose payload has `role` `anon` or
+    `service_role`.
   - Exits non-zero on a match. Runs in CI (`bundle-secrets` job) and in `release.yml`.
 - **Release** `release.yml` on tag `v*`: install → test → prod build → bundle check → `wxt zip` →
   `softprops/action-gh-release` (or `gh release create`) attaching `markme-<version>-chrome.zip`.
@@ -1564,7 +1566,7 @@ both open, rename a folder in the side panel; the popup's folder list updates.
 | A28 | Tags per item max 20; names trimmed, inner whitespace collapsed, no commas; duplicates removed case-insensitively (first spelling kept)                                                                                                                       | M2/M5       | The database enforces none of these; dedupe instead of failing a save                                                           | Fail on duplicates; no cap                                                                                          |
 | A29 | `note`/`title` empty after trim → `null` (cleared)                                                                                                                                                                                                            | M2/M5/M6    | One meaning for "no value"; schemas never output `""`                                                                           | Keep `""`                                                                                                           |
 | A30 | One exported `LIMITS` object (title 300, description 1000, siteName 200, note 1000, url 2048, name 100, tags 20)                                                                                                                                              | M2/M3       | Every schema and the preview API's truncation use the same numbers; M1 caps (A18) stay ceilings                                 | Per-schema literals                                                                                                 |
-| A31 | Client factory only at `@markme/domain/client`; options `url`, `anonKey`, `storage`, `detectSessionInUrl`; `pkce`, auto refresh, persist session fixed; no `lock`                                                                                             | M2/M4       | The preview API never loads `supabase-js`; no surface can pick a setting S0 ruled out                                           | Root export; pass-through options                                                                                   |
+| A31 | Client factory only at `@markme/domain/client`; options `url`, `publishableKey`, `storage`, `detectSessionInUrl`; `pkce`, auto refresh, persist session fixed; no `lock`                                                                                      | M2/M4       | The preview API never loads `supabase-js`; no surface can pick a setting S0 ruled out                                           | Root export; pass-through options                                                                                   |
 | A32 | `@vitest/coverage-v8`; the domain `test` script always runs coverage (100% for `src/url/**`)                                                                                                                                                                  | M2          | The exit needs a gate; the existing CI `test` check enforces it without a new job                                               | Separate coverage job                                                                                               |
 | A33 | `httpUrl` schema built on `normalizeUrl`                                                                                                                                                                                                                      | M2/M3/M5    | One set of URL rules; `z.url()` accepts URLs the normalizer rejects                                                             | `z.url()`                                                                                                           |
 | A34 | `mediaType`, `previewStatus`, `embedProvider` built from `Constants` in `@markme/database`                                                                                                                                                                    | M2          | Enums cannot drift from the migrations                                                                                          | Copy the values                                                                                                     |
@@ -1588,6 +1590,7 @@ both open, rename a folder in the side panel; the popup's folder list updates.
 | A52 | Deploy a prebuilt function (Build Output API) with `vercel deploy --prebuilt --prod` from GitHub Actions on push to `main` and `workflow_dispatch`; `VERCEL_TOKEN` secret, ids and URLs as repo variables; `maxDuration` 30 s; replaces the WIF deploy of A47 | M3          | `@markme/domain` exports TS source, so we ship our own esbuild bundle instead of a Vercel build; same triggers as A47           | Vercel Git integration or zero-config Express (builds on Vercel from source)                                        |
 | A53 | In-memory cache and rate limits stay per instance; Hobby cannot cap instances; `trust proxy` 1 kept (Vercel overwrites `X-Forwarded-For`)                                                                                                                     | M3          | Low traffic in v1; a shared store is a new service for little gain                                                              | Upstash Redis store                                                                                                 |
 | A54 | Hobby is non-commercial only. Before the first paid feature ships, the preview API moves to another host, chosen with Mostafa's approval. MarkMe never pays Vercel (no paid Vercel plan). The Dockerfile stays to keep that move cheap                        | later       | Mostafa plans paid plans and will not pay Vercel (2026-10-24)                                                                   | Vercel Pro (rejected: no money to Vercel); stay on Hobby (breaks its terms once MarkMe earns money)                 |
+| A55 | Clients use the publishable key (`WXT_SUPABASE_PUBLISHABLE_KEY`, factory option `publishableKey`); test/seed code uses `SUPABASE_SECRET_KEY`; legacy `anon`/`service_role` keys are disabled on the hosted project.                                           | keys        | Supabase removes legacy keys in late 2026, and a free-plan project restored after a pause comes back without them.              | Keep the anon key until removal                                                                                     |
 
 A1, A3 and A7 are in PRD v1.1. S0 Q3 showed Supabase cannot allow unverified password sign-in, so
 A7 option (a) applies; the constitution was amended to match (v1.1.1, Auth line).
