@@ -401,6 +401,8 @@ password; **ask Mostafa** before each step. Never create or store a hosted secre
     `gh variable set WXT_SUPABASE_PUBLISHABLE_KEY --body "$HOSTED_PK"`.
   - **Done when**: the regex check prints `ok` and `gh variable list` shows
     `WXT_SUPABASE_PUBLISHABLE_KEY`.
+  - **Result (2026-10-24)**: hosted publishable key passed the shape check (`ok`); GitHub variable
+    `WXT_SUPABASE_PUBLISHABLE_KEY` created.
 
 - [ ] T013 [US3] Hosted baseline check before disabling legacy keys (quickstart H2; depends on
       T012).
@@ -409,6 +411,8 @@ password; **ask Mostafa** before each step. Never create or store a hosted secre
     quickstart V6 step 3 against the deployed preview API with that token.
   - **Done when**: sign-in 200; preview API 401 / 200 / 422 / 200. If anything fails, stop: do not
     run T014.
+  - **Result (2026-10-24)**: hosted sign-in with only the publishable key returned an 802-character
+    token; deployed preview API 401 / 200 / 422 / 200.
 
 - [ ] T014 [US3] Disable hosted legacy keys, recheck and record (quickstart H3–H5; depends on
       T013 passing).
@@ -418,6 +422,10 @@ password; **ask Mostafa** before each step. Never create or store a hosted secre
     re-enable legacy keys in the same dashboard section, fix, retry H4.
   - **Done when**: H4 matches H2 and the old anon key is refused. Write the date, the H2 and H4
     results and "legacy keys disabled" under this task.
+  - **Result (2026-10-25)**: legacy JWT-based API keys disabled in the dashboard (H3). H4: hosted
+    sign-in with only the publishable key returned an 802-character token; deployed preview API
+    401 / 200 / 422 / 200 (same as H2); the old hosted anon key now gets 401 on
+    `/auth/v1/settings`. Legacy keys disabled.
   - **Commit**: `docs(keys): record hosted legacy-key cutover (T014)`.
 
 **Checkpoint**: open PR 4 (`keys/us3-hosted-cutover` → `005-supabase-api-keys`). A pause/restore
