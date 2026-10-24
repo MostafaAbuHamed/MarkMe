@@ -55,8 +55,11 @@ function decodeBody(body: Uint8Array, charset: string): string {
 
 // WHATWG URL brackets IPv6 hosts and normalizes IPv4 forms to four-part decimal.
 function isPrivateHost(hostname: string): boolean {
-  const isIpLiteral = hostname.startsWith("[") || IPV4_LITERAL.test(hostname);
-  return hostname === "localhost" || (isIpLiteral && isBlockedAddress(hostname));
+  const host = hostname.endsWith(".") ? hostname.slice(0, -1) : hostname;
+  const isIpLiteral = host.startsWith("[") || IPV4_LITERAL.test(host);
+  return (
+    host === "localhost" || host.endsWith(".localhost") || (isIpLiteral && isBlockedAddress(host))
+  );
 }
 
 function resolveHttpUrl(value: string | undefined, finalUrl: string): string | undefined {

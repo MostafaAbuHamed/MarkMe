@@ -144,6 +144,11 @@ describe("parseHtmlMetadata", () => {
     ["og:image on 127.0.0.1", '<meta property="og:image" content="http://127.0.0.1/a.png">'],
     ["twitter:image on localhost", '<meta name="twitter:image" content="http://localhost/x.png">'],
     ["og:image with javascript:", '<meta property="og:image" content="javascript:alert(1)">'],
+    ["og:image on localhost.", '<meta property="og:image" content="http://localhost./x.png">'],
+    [
+      "twitter:image on a.localhost",
+      '<meta name="twitter:image" content="http://a.localhost/x.png">',
+    ],
   ])("drops an image URL: %s", (_name, head) => {
     const result = parseHtmlMetadata(html(head), undefined, "https://public.example/");
     expect(result.imageUrl).toBeUndefined();
