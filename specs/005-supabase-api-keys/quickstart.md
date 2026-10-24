@@ -19,10 +19,10 @@ Expected: `[dev]` reports both `.env` files created. Then (in another shell):
 
 ```bash
 grep -c '^WXT_SUPABASE_PUBLISHABLE_KEY=sb_publishable_' apps/extension/.env
-grep -cE 'eyJ|sb_secret_|ANON|SERVICE' apps/extension/.env apps/preview-api/.env
+grep -hv '^#' apps/extension/.env apps/preview-api/.env | grep -cE 'eyJ|sb_secret_|ANON|SERVICE'
 ```
 
-Expected: `1`, then `0` for each file.
+Expected: `1`, then `0` (comment lines are skipped: `.env.example` names the old variable in one).
 
 ## L2. Sign-in and owned data on the publishable key (US1, FR-005)
 

@@ -189,6 +189,10 @@ WXT_PREVIEW_API_URL: "http://127.0.0.1:8787" }`; the preview-api row is unchange
   - **Done when**: L1 prints `1` then `0` per file; L2 prints `200`, `[]`, `200`; `pnpm db:test`
     and the scripts suite pass. Record the date and results under this task.
   - **Commit**: none (record lands with the PR's last commit, or in T015).
+  - **Result (2026-10-24)**: L1 `[dev]` created both `.env` files; `1`, then `0` once comment
+    lines are skipped (the L1 grep in quickstart.md now skips them). L2 signup `200`, folders `[]`
+    `200`, preview API `422` for a metadata address with that token. `pnpm db:test` 360/360 pass.
+    Scripts suite pass (L3).
 
 **Checkpoint**: open PR 1 (`keys/us1-local-dev` → `005-supabase-api-keys`). A fresh checkout runs
 on the publishable key.
