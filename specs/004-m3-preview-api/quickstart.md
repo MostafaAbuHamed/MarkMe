@@ -15,12 +15,12 @@ repeat them.
   scripted resolver and test-signed tokens.
 - V4 needs Docker.
 - V5 needs `pnpm dev` (local Supabase).
-- V6 needs the GCP setup (V7) once.
+- V6 needs the Vercel setup (V7) once.
 
 ## V1. SSRF suites pass (SC-001, SC-002, FR-006–FR-012, FR-028)
 
 ```bash
-pnpm --filter @markme/preview-api exec vitest run test/ip-policy.test.ts test/safe-fetch.*.test.ts
+pnpm --filter @markme/preview-api exec vitest run ip-policy safe-fetch
 ```
 
 Expected:

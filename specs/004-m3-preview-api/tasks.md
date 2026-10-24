@@ -89,7 +89,7 @@ Rules for all tasks:
 
 **Purpose**: put the milestone branch on GitHub so story PRs can target it.
 
-- [ ] T001 Commit this task list and publish the milestone branch.
+- [x] T001 Commit this task list and publish the milestone branch.
   - **Files**: `/specs/004-m3-preview-api/tasks.md`, `/specs/004-m3-preview-api/research.md`
     (R17, added with this list).
   - **Steps**:
@@ -108,7 +108,7 @@ Rules for all tasks:
 **Purpose**: the env keys, the error type and an injectable `createApp`. Every later task builds on
 these.
 
-- [ ] T002 Add the M3 env keys, the error type and the `createApp(options)` seam.
+- [x] T002 Add the M3 env keys, the error type and the `createApp(options)` seam.
   - **Files**: `src/env.ts`, `src/errors.ts`, `src/app.ts`, `src/server.ts`, `.env.example`,
     `test/env.test.ts`, `test/errors.test.ts`, `test/healthz.test.ts`.
   - **Test first**:
@@ -158,7 +158,7 @@ metadata address, directly, through DNS or through a redirect (FR-002, FR-004–
 **Independent test**: `pnpm --filter @markme/preview-api test` passes, and quickstart V1 holds:
 every SSRF case is green and no `it.fails` or `it.todo` remains.
 
-- [ ] T003 [US1] Verify Supabase access tokens with ES256 JWKS (A37, R7).
+- [x] T003 [US1] Verify Supabase access tokens with ES256 JWKS (A37, R7).
   - **Files**: `src/auth.ts`, `src/app.ts`, `test/helpers/tokens.ts`, `test/auth.test.ts`,
     `package.json`, `/pnpm-lock.yaml`.
   - **Dependency**: `jose@6.2.12`.
@@ -197,7 +197,7 @@ every SSRF case is green and no `it.fails` or `it.todo` remains.
   - **Done when**: the auth suite passes, and `pnpm typecheck` and `pnpm lint` pass.
   - **Commit**: `feat(preview-api): verify Supabase JWTs with ES256 JWKS (T003)`.
 
-- [ ] T004 [P] [US1] Add the CORS allowlist, the 4 KB body limit and the request log (A43, A44,
+- [x] T004 [P] [US1] Add the CORS allowlist, the 4 KB body limit and the request log (A43, A44,
       R13, R14).
   - **Files**: `src/cors.ts`, `src/log.ts`, `src/app.ts`, `test/cors.test.ts`, `test/log.test.ts`.
   - **Test first**:
@@ -236,7 +236,7 @@ every SSRF case is green and no `it.fails` or `it.todo` remains.
   - **Done when**: the cors and log suites pass, and `pnpm lint` passes.
   - **Commit**: `feat(preview-api): add CORS allowlist, body limit and host-only request log (T004)`.
 
-- [ ] T005 [P] [US1] Implement the address policy and its full suite (R5).
+- [x] T005 [P] [US1] Implement the address policy and its full suite (R5).
   - **Files**: `src/ssrf/ip-policy.ts`, `test/ip-policy.test.ts`, `package.json`,
     `/pnpm-lock.yaml`.
   - **Dependency**: `ipaddr.js@2.5.0`.
@@ -271,7 +271,7 @@ every SSRF case is green and no `it.fails` or `it.todo` remains.
     CIDR list, then confirm the suite fails (either layer alone still blocks).
   - **Commit**: `feat(preview-api): add IPv4/IPv6 address policy for SSRF (T005)`.
 
-- [ ] T006 [US1] Write the five `safe-fetch` suites before the fetcher exists (constitution III,
+- [x] T006 [US1] Write the five `safe-fetch` suites before the fetcher exists (constitution III,
       R16).
   - **Files**: `src/ssrf/safe-fetch.ts` (stub), `src/ssrf/resolve.ts` (types only),
     `test/helpers/servers.ts`, `test/helpers/resolver.ts`,
@@ -353,7 +353,7 @@ every SSRF case is green and no `it.fails` or `it.todo` remains.
     - `pnpm typecheck` and `pnpm lint` pass.
   - **Commit**: `test(preview-api): add SSRF safe-fetch suites ahead of the fetcher (T006)`.
 
-- [ ] T007 [US1] Implement `resolve.ts` and `safe-fetch.ts`, then turn every `it.fails` into `it`
+- [x] T007 [US1] Implement `resolve.ts` and `safe-fetch.ts`, then turn every `it.fails` into `it`
       (R3, R4, A41, A45).
   - **Files**: `src/ssrf/resolve.ts`, `src/ssrf/safe-fetch.ts`, the five `test/safe-fetch.*.test.ts`
     files (`it.fails` → `it` only), `package.json` and `/pnpm-lock.yaml`.
@@ -412,7 +412,7 @@ JSON, with no network.
 
 Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3/us2-metadata`.
 
-- [ ] T008 [US2] Add `sanitizeText` (R10).
+- [x] T008 [US2] Add `sanitizeText` (R10).
   - **Files**: `src/parse/sanitize.ts`, `test/sanitize.test.ts`, `package.json`,
     `/pnpm-lock.yaml`.
   - **Dependency**: `cheerio@1.2.0`.
@@ -433,7 +433,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
   - **Done when**: the sanitize suite passes, and `pnpm lint` passes.
   - **Commit**: `feat(preview-api): add text sanitizer with shared length limits (T008)`.
 
-- [ ] T009 [US2] Parse HTML metadata, with charset detection and private image hosts dropped (A40,
+- [x] T009 [US2] Parse HTML metadata, with charset detection and private image hosts dropped (A40,
       A42, R9).
   - **Files**: `src/parse/html-metadata.ts`, `test/html-metadata.test.ts`, `test/fixtures/*.html`.
   - **Test first**: fixtures, and the expected `PageMetadata` for each, from the data model's
@@ -465,7 +465,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
   - **Done when**: the html-metadata suite passes, and `pnpm lint` passes.
   - **Commit**: `feat(preview-api): parse page metadata with charset detection (T009)`.
 
-- [ ] T010 [US2] Add the YouTube, X and Instagram oEmbed adapters (A6, A19, A26, R12).
+- [x] T010 [US2] Add the YouTube, X and Instagram oEmbed adapters (A6, A19, A26, R12).
   - **Files**: `src/oembed/index.ts`, `src/oembed/youtube.ts`, `src/oembed/x.ts`,
     `src/oembed/instagram.ts`, `test/oembed.test.ts`.
   - **Test first** (a fake `SafeFetch` that records the URL and options it gets, and returns
@@ -513,7 +513,7 @@ locally.
 
 Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3/us3-endpoint`.
 
-- [ ] T011 [US3] Add the preview cache and the pipeline (A39, A45, R11).
+- [x] T011 [US3] Add the preview cache and the pipeline (A39, A45, R11).
   - **Files**: `src/cache.ts`, `src/pipeline.ts`, `test/pipeline.test.ts`, `package.json`,
     `/pnpm-lock.yaml`.
   - **Dependency**: `lru-cache@11.5.3`.
@@ -555,7 +555,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
   - **Done when**: the pipeline suite passes, and `pnpm lint` passes.
   - **Commit**: `feat(preview-api): add preview pipeline with 24h shared cache (T011)`.
 
-- [ ] T012 [US3] Mount `POST /v1/preview` (FR-001, FR-003).
+- [x] T012 [US3] Mount `POST /v1/preview` (FR-001, FR-003).
   - **Files**: `src/app.ts`, `src/server.ts`, `test/app.test.ts`.
   - **Test first** (`test/app.test.ts`: supertest; `createApp` with the test `jwks`, a
     `safeFetch` built from `testFetchDeps` (scripted resolver, `allowAll`, the server's port), local target servers, and a
@@ -585,7 +585,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
     `curl -XPOST localhost:8787/v1/preview -d '{}' -H 'content-type: application/json'` → 401.
   - **Commit**: `feat(preview-api): add POST /v1/preview endpoint (T012)`.
 
-- [ ] T013 [US3] Add the IP, user and force rate limiters (A38, R8).
+- [x] T013 [US3] Add the IP, user and force rate limiters (A38, R8).
   - **Files**: `src/ratelimit.ts`, `src/app.ts`, `test/app.test.ts`, `package.json`,
     `/pnpm-lock.yaml`.
   - **Dependency**: `express-rate-limit@8.7.1`.
@@ -626,7 +626,7 @@ Run through WIF (FR-023–FR-027).
 
 Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3/us4-ship`.
 
-- [ ] T014 [US4] Switch `build` to an esbuild single-file bundle (R1, deviation 1).
+- [x] T014 [US4] Switch `build` to an esbuild single-file bundle (R1, deviation 1).
   - **Files**: `scripts/build.mjs` (new, inside `apps/preview-api/`), `package.json`, and
     `tsconfig.build.json` (deleted; it is unused after this change).
   - **Dependency**: `esbuild@0.28.2` (dev).
@@ -646,7 +646,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
     `pnpm typecheck` pass.
   - **Commit**: `build(preview-api): bundle the service with esbuild into dist/server.mjs (T014)`.
 
-- [ ] T015 [US4] Add the Dockerfile and the `preview-api-image` CI job (R15).
+- [x] T015 [US4] Add the Dockerfile and the `preview-api-image` CI job (R15).
   - **Files**: `Dockerfile`, `/.dockerignore`, `/.github/workflows/ci.yml`.
   - **Implement**:
     - `Dockerfile`, with the repo root as the build context:
@@ -677,7 +677,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
       That is a repo setting outside git; do not change it without a yes.
   - **Commit**: `ci(preview-api): add Dockerfile and image build-and-run job (T015)`.
 
-- [ ] T016 [P] [US4] Write the GCP setup wizard (A49, R15). **Superseded by T021.**
+- [x] T016 [P] [US4] Write the GCP setup wizard (A49, R15). **Superseded by T021.**
   - **Files**: `/scripts/setup-gcp.sh`.
   - **Implement**: generate it with the **`wizard` skill**. It is an interactive bash script that
     Mostafa runs; the agent never runs it. Its steps, in order, each idempotent (check before
@@ -705,7 +705,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
     and no step needs a secret value or writes one to disk.
   - **Commit**: `chore(preview-api): add GCP setup wizard for Cloud Run deploy (T016)`.
 
-- [ ] T017 [US4] Add the Cloud Run deploy workflow (A46–A48, R15). **Superseded by T021.**
+- [x] T017 [US4] Add the Cloud Run deploy workflow (A46–A48, R15). **Superseded by T021.**
   - **Files**: `/.github/workflows/deploy-preview-api.yml`.
   - **Implement**:
     - Triggers:
@@ -729,7 +729,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
     and `grep -n "secrets\." .github/workflows/deploy-preview-api.yml` prints nothing.
   - **Commit**: `ci(preview-api): add Cloud Run deploy workflow via WIF (T017)`.
 
-- [ ] T018 [P] [US4] Document running, configuring and deploying the service.
+- [x] T018 [P] [US4] Document running, configuring and deploying the service.
   - **Files**: `README.md` (new, inside `apps/preview-api/`), `/README.md` (Commands and
     Repository layout lines only), `/CLAUDE.md` ("Current state" paragraph for M3).
   - **Implement**:
@@ -755,7 +755,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
 Cloud Run needs an active billing account and Google asked for a $30 prepayment, which Mostafa
 declined. T016 and T017 shipped the Cloud Run path; T021 replaces it.
 
-- [ ] T021 Move the deploy to Vercel Hobby (R18).
+- [x] T021 Move the deploy to Vercel Hobby (R18).
   - **Files**: `.specify/memory/constitution.md` (1.1.4), `docs/PRD.md`, `docs/PLAN.md`,
     `docs/IMPLEMENTATION_PLAN.md` (A51–A54), this spec's artifacts,
     `apps/preview-api/src/vercel.ts`, `apps/preview-api/scripts/build.mjs`,
@@ -768,7 +768,7 @@ declined. T016 and T017 shipped the Cloud Run path; T021 replaces it.
 
 ## Phase 7: Polish and exit
 
-- [ ] T019 Make the deploy workflow dispatchable (R17). **Needs Mostafa's approval first.**
+- [x] T019 Make the deploy workflow dispatchable (R17). **Needs Mostafa's approval first.**
   - **Why**: GitHub only dispatches workflows that exist on `main`.
   - **Steps (after a yes)**:
     1. `git switch main && git pull && git switch -c ci/deploy-workflow`.
@@ -778,7 +778,7 @@ declined. T016 and T017 shipped the Cloud Run path; T021 replaces it.
   - **Prerequisite**: T021 is merged and Mostafa has done the one-time Vercel setup (quickstart V7).
   - **Done when**: `gh workflow list` shows "Deploy preview API".
 
-- [ ] T020 Run the exit verification (no code change).
+- [x] T020 Run the exit verification (no code change).
   - **Steps**: quickstart V1–V6 in order:
     - V6 is `gh workflow run deploy-preview-api.yml --ref 004-m3-preview-api`, then the curl
       checks against `PREVIEW_API_URL` with a token from the hosted project.
