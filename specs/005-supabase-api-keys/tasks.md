@@ -370,6 +370,11 @@ docs/IMPLEMENTATION_PLAN.md` prints only lines that say "legacy"; `pnpm format:c
     hit in the file that owns it (amend into T008–T010's scope with its own commit
     `docs: … (T011)` if needed). Record the result under this task.
   - **Commit**: only if a fix was needed.
+  - **Result (2026-10-24)**: no fix needed. Hits: `.env.example` "Replaces" comment; the A55 row
+    and env-table "legacy anon key" note in `docs/IMPLEMENTATION_PLAN.md`; test fixtures in
+    `env-schema.test.ts`, `dev-env.test.mjs` and `check-bundle-secrets.test.mjs` that prove the
+    legacy names are ignored or flagged. T008 verified locally: signup 200, password grant returns a
+    token.
 
 **Checkpoint**: open PR 3 (`keys/us4-docs` → `005-supabase-api-keys`). After it merges, every
 component and doc uses the publishable key.

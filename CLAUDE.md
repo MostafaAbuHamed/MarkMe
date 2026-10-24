@@ -54,7 +54,10 @@ merges to `main` and `NNN-*` milestone branches unless all are green. After a mi
 `pnpm db:types` and commit the result (CI fails on drift).
 
 Config: every app validates env via `parseEnv` from `@markme/domain`; the extension schema is locked
-to three public keys by a test.
+to three public keys by a test. Clients use only the publishable key (`WXT_SUPABASE_PUBLISHABLE_KEY`,
+factory option `publishableKey`); test/seed code that needs elevated access uses `SUPABASE_SECRET_KEY`;
+never the legacy `anon`/`service_role` keys (A55); `node scripts/check-bundle-secrets.mjs` checks a
+built bundle.
 
 Dev browser (opt-in): `wxt.config.ts` keeps `webExt.disabled = true`; a gitignored
 `apps/extension/web-ext.config.ts` (see README) turns the launch on per machine. On Mostafa's machine
