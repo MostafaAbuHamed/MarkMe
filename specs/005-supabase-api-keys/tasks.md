@@ -74,7 +74,7 @@ Rules for all tasks:
 
 **Purpose**: put the feature branch on GitHub so story PRs can target it.
 
-- [ ] T001 Commit the design documents and this task list, and publish the feature branch.
+- [x] T001 Commit the design documents and this task list, and publish the feature branch.
   - **Files**: `specs/005-supabase-api-keys/**` (spec, checklist, plan, research, data-model,
     contracts, quickstart, tasks).
   - **Steps**:
@@ -105,7 +105,7 @@ Decision). US1 starts right after T001.
 `eyJ|sb_secret_|ANON|SERVICE`; sign-in and an owned query succeed with the publishable key;
 `pnpm db:test` passes.
 
-- [ ] T002 [P] [US1] Rename the client factory option `anonKey` to `publishableKey` (R5,
+- [x] T002 [P] [US1] Rename the client factory option `anonKey` to `publishableKey` (R5,
       contracts/client-factory.md) in `packages/domain/src/client/factory.ts`.
   - **Files**: `packages/domain/src/client/factory.ts`,
     `packages/domain/src/client/factory.test.ts`.
@@ -125,7 +125,7 @@ detectSessionInUrl } })`.
     `pnpm typecheck`, `pnpm lint` pass; `git grep -n anonKey -- packages/` prints nothing.
   - **Commit**: `refactor(domain): rename factory option anonKey to publishableKey (T002)`.
 
-- [ ] T003 [P] [US1] Switch the extension env to `WXT_SUPABASE_PUBLISHABLE_KEY` end to end:
+- [x] T003 [P] [US1] Switch the extension env to `WXT_SUPABASE_PUBLISHABLE_KEY` end to end:
       schema, `.env.example` and the `pnpm dev` generator, in one commit so `pnpm dev` works at
       every commit (R1, R3, R4, contracts/extension-env.md, contracts/dev-env-generator.md).
   - **Files**: `apps/extension/src/lib/env-schema.ts`,
@@ -180,7 +180,7 @@ WXT_PREVIEW_API_URL: "http://127.0.0.1:8787" }`; the preview-api row is unchange
     dev-env status fixture and tests, plus `apps/preview-api/README.md` (fixed in T008).
   - **Commit**: `feat(extension): configure the publishable key instead of the anon key (T003)`.
 
-- [ ] T004 [US1] Run quickstart L1–L3 on the local stack (depends on T002, T003). No code change.
+- [x] T004 [US1] Run quickstart L1–L3 on the local stack (depends on T002, T003). No code change.
   - **Steps**: `pnpm db:start`; move both app `.env` files aside (L1), run `pnpm dev`, run the two
     `grep` checks; run L2's signup → password grant → `GET /rest/v1/folders` with only
     `apikey: $PUBLISHABLE_KEY` plus the user token; run `pnpm db:test`; run
@@ -208,7 +208,7 @@ FR-006).
 **Independent test**: `pnpm --filter @markme/extension test` refuses every wrong kind;
 quickstart L4 and L5 (real build passes, planted secret and anon keys fail, no key text printed).
 
-- [ ] T005 [US2] Enforce the publishable-key shape in
+- [x] T005 [US2] Enforce the publishable-key shape in
       `apps/extension/src/lib/env-schema.ts` (R2, contracts/extension-env.md; depends on T003).
   - **Files**: `apps/extension/src/lib/env-schema.ts`,
     `apps/extension/src/lib/env-schema.test.ts`.
@@ -237,7 +237,7 @@ quickstart L4 and L5 (real build passes, planted secret and anon keys fail, no k
     `pnpm --filter @markme/extension build` still succeeds with the `.env` from T004.
   - **Commit**: `feat(extension): accept only sb_publishable_ keys (T005)`.
 
-- [ ] T006 [P] [US2] Add the release-bundle secret check `scripts/check-bundle-secrets.mjs`, tests
+- [x] T006 [P] [US2] Add the release-bundle secret check `scripts/check-bundle-secrets.mjs`, tests
       first (R6, contracts/bundle-secret-check.md, data-model "Bundle-check finding"). Independent
       of T005; can start alongside US1.
   - **Files**: `scripts/check-bundle-secrets.mjs` (new),
@@ -283,7 +283,7 @@ quickstart L4 and L5 (real build passes, planted secret and anon keys fail, no k
   - **Done when**: `pnpm exec vitest run --dir scripts`, `pnpm lint`, `pnpm format:check` pass.
   - **Commit**: `feat(scripts): add release-bundle secret check (T006)`.
 
-- [ ] T007 [US2] Run quickstart L4 and L5 against a real extension build (depends on T005, T006).
+- [x] T007 [US2] Run quickstart L4 and L5 against a real extension build (depends on T005, T006).
       No code change unless a check fails (then fix with a failing test first).
   - **Steps**: `pnpm --filter @markme/extension test`; the L4 old-style `.env` spot check (build
     exits 1 with `WXT_SUPABASE_PUBLISHABLE_KEY: missing` and the `.env.example` hint; file not
@@ -312,7 +312,7 @@ elevated access; the decision is logged as A55 (FR-007, FR-009, R7, R11).
 
 **Independent test**: the quickstart docs sweep prints no live anon/service-role-key reference.
 
-- [ ] T008 [P] [US4] Rewrite the token steps in `apps/preview-api/README.md` ("Get a local access
+- [x] T008 [P] [US4] Rewrite the token steps in `apps/preview-api/README.md` ("Get a local access
       token") to use the publishable key (R8).
   - **Files**: `apps/preview-api/README.md`.
   - **Change**: the intro names `PUBLISHABLE_KEY` from
@@ -325,7 +325,7 @@ elevated access; the decision is logged as A55 (FR-007, FR-009, R7, R11).
     `blocked_target`); `pnpm format:check` passes.
   - **Commit**: `docs(preview-api): get local tokens with the publishable key (T008)`.
 
-- [ ] T009 [P] [US4] Update `docs/IMPLEMENTATION_PLAN.md` to the new keys and log A55 (R7, R10,
+- [x] T009 [P] [US4] Update `docs/IMPLEMENTATION_PLAN.md` to the new keys and log A55 (R7, R10,
       R11).
   - **Files**: `docs/IMPLEMENTATION_PLAN.md`.
   - **Change** (line numbers as of `9efaea4`):
@@ -351,7 +351,7 @@ elevated access; the decision is logged as A55 (FR-007, FR-009, R7, R11).
 docs/IMPLEMENTATION_PLAN.md` prints only lines that say "legacy"; `pnpm format:check` passes.
   - **Commit**: `docs(plan): switch to publishable and secret keys, add A55 (T009)`.
 
-- [ ] T010 [P] [US4] Add the key rule to `CLAUDE.md` (Config paragraph).
+- [x] T010 [P] [US4] Add the key rule to `CLAUDE.md` (Config paragraph).
   - **Files**: `CLAUDE.md`.
   - **Change**: one sentence after "the extension schema is locked to three public keys by a
     test": clients use only the publishable key (`WXT_SUPABASE_PUBLISHABLE_KEY`, factory option
@@ -362,7 +362,7 @@ docs/IMPLEMENTATION_PLAN.md` prints only lines that say "legacy"; `pnpm format:c
     real.
   - **Commit**: `docs: note the Supabase key rule in CLAUDE.md (T010)`.
 
-- [ ] T011 [US4] Run the quickstart docs sweep (SC-003; depends on T008–T010).
+- [x] T011 [US4] Run the quickstart docs sweep (SC-003; depends on T008–T010).
   - **Command**: `git grep -nIiE 'anon[_ ]?key|anonKey|service[_ ]?role[_ ]?key' --
 ':!specs/00[1-4]*' ':!pnpm-lock.yaml' ':!specs/005-supabase-api-keys'`.
   - **Done when**: every hit is a "legacy" / "do not use" note, the `.env.example` "Replaces
@@ -393,7 +393,7 @@ All three tasks are **owner steps** (dashboard, GitHub variables). The agent pre
 records results but never performs a dashboard action, sets a GitHub variable or handles a
 password; **ask Mostafa** before each step. Never create or store a hosted secret key (R10).
 
-- [ ] T012 [US3] Get, check and publish the hosted publishable key (quickstart H1; depends on
+- [x] T012 [US3] Get, check and publish the hosted publishable key (quickstart H1; depends on
       PR 3 merged).
   - **Steps (Mostafa)**: Dashboard → `markme` → Settings → API Keys → "Publishable and secret API
     keys"; create the publishable key if none exists. Check it with the H1 `node -e` regex
@@ -404,7 +404,7 @@ password; **ask Mostafa** before each step. Never create or store a hosted secre
   - **Result (2026-10-24)**: hosted publishable key passed the shape check (`ok`); GitHub variable
     `WXT_SUPABASE_PUBLISHABLE_KEY` created.
 
-- [ ] T013 [US3] Hosted baseline check before disabling legacy keys (quickstart H2; depends on
+- [x] T013 [US3] Hosted baseline check before disabling legacy keys (quickstart H2; depends on
       T012).
   - **Steps (Mostafa runs; agent may prepare the commands)**: L2's sign-in commands with
     `API_URL=https://<ref>.supabase.co`, `apikey: $HOSTED_PK` and a confirmed test user; then M3
@@ -414,7 +414,7 @@ password; **ask Mostafa** before each step. Never create or store a hosted secre
   - **Result (2026-10-24)**: hosted sign-in with only the publishable key returned an 802-character
     token; deployed preview API 401 / 200 / 422 / 200.
 
-- [ ] T014 [US3] Disable hosted legacy keys, recheck and record (quickstart H3–H5; depends on
+- [x] T014 [US3] Disable hosted legacy keys, recheck and record (quickstart H3–H5; depends on
       T013 passing).
   - **Files**: `specs/005-supabase-api-keys/tasks.md` (this file).
   - **Steps**: Mostafa clicks "Disable JWT-based API keys" (H3); rerun T013's check (H4) and send
@@ -435,13 +435,17 @@ or Supabase's final removal now needs zero changes (SC-005).
 
 ## Phase 7: Polish & exit verification
 
-- [ ] T015 Verify the feature end to end and open the feature PR (depends on T001–T014).
+- [x] T015 Verify the feature end to end and open the feature PR (depends on T001–T014).
   - **Steps**: on the updated `005-supabase-api-keys`, run `pnpm lint`, `pnpm format:check`,
     `pnpm typecheck`, `pnpm test`, `pnpm db:test`; rerun quickstart L1 on a clean checkout
     (SC-001) and the docs sweep (SC-003). Mark T001–T015 done with any recorded results in this
     file, commit `docs(keys): mark tasks done after exit verification (T015)`, then open
     `005-supabase-api-keys` → `main` (PR body via the `pr` skill). Mostafa merges it.
   - **Done when**: all commands pass, all five CI checks are green on the feature PR.
+  - **Result (2026-10-25)**: on the merged feature tip (`f1b1035`), `pnpm lint`, `format:check`,
+    `typecheck`, `test` and `db:test` pass. L1 on fresh `.env` files: both created, `1` publishable
+    line, `0` other keys, `/healthz` ok (SC-001). Docs sweep unchanged from T011 (SC-003). Hosted
+    checks H2/H4 pass with legacy keys disabled (SC-004, SC-005).
 
 ---
 
