@@ -677,7 +677,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
       That is a repo setting outside git; do not change it without a yes.
   - **Commit**: `ci(preview-api): add Dockerfile and image build-and-run job (T015)`.
 
-- [ ] T016 [P] [US4] Write the GCP setup wizard (A49, R15).
+- [ ] T016 [P] [US4] Write the GCP setup wizard (A49, R15). **Superseded by T021.**
   - **Files**: `/scripts/setup-gcp.sh`.
   - **Implement**: generate it with the **`wizard` skill**. It is an interactive bash script that
     Mostafa runs; the agent never runs it. Its steps, in order, each idempotent (check before
@@ -705,7 +705,7 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
     and no step needs a secret value or writes one to disk.
   - **Commit**: `chore(preview-api): add GCP setup wizard for Cloud Run deploy (T016)`.
 
-- [ ] T017 [US4] Add the Cloud Run deploy workflow (A46–A48, R15).
+- [ ] T017 [US4] Add the Cloud Run deploy workflow (A46–A48, R15). **Superseded by T021.**
   - **Files**: `/.github/workflows/deploy-preview-api.yml`.
   - **Implement**:
     - Triggers:
@@ -750,6 +750,22 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
 
 ---
 
+## Phase 6b: Hosting change (A51–A54, added 2026-10-24)
+
+Cloud Run needs an active billing account and Google asked for a $30 prepayment, which Mostafa
+declined. T016 and T017 shipped the Cloud Run path; T021 replaces it.
+
+- [ ] T021 Move the deploy to Vercel Hobby (R18).
+  - **Files**: `.specify/memory/constitution.md` (1.1.4), `docs/PRD.md`, `docs/PLAN.md`,
+    `docs/IMPLEMENTATION_PLAN.md` (A51–A54), this spec's artifacts,
+    `apps/preview-api/src/vercel.ts`, `apps/preview-api/scripts/build.mjs`,
+    `apps/preview-api/scripts/vercel-output.mjs`, `apps/preview-api/test/vercel.test.ts`,
+    `.github/workflows/deploy-preview-api.yml`, `apps/preview-api/README.md`, `CLAUDE.md`,
+    `README.md`, `.gitignore`; `scripts/setup-gcp.sh` → `scripts/archive/setup-gcp.sh`.
+  - **Done when**: lint, typecheck, test and build pass; `vercel-output.mjs` writes the expected
+    tree; docs name Vercel and the move off Hobby before paid plans.
+  - **Commits**: docs, code, then deploy workflow and README, one per part.
+
 ## Phase 7: Polish and exit
 
 - [ ] T019 Make the deploy workflow dispatchable (R17). **Needs Mostafa's approval first.**
@@ -759,17 +775,17 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
     2. `git checkout 004-m3-preview-api -- .github/workflows/deploy-preview-api.yml`.
     3. Commit with `ci: add preview API deploy workflow ahead of M3 merge (T019)`.
     4. Open a PR to `main`. The five checks must be green. Mostafa merges it.
-  - **Prerequisite**: Mostafa has run `scripts/setup-gcp.sh` (quickstart V7).
+  - **Prerequisite**: T021 is merged and Mostafa has done the one-time Vercel setup (quickstart V7).
   - **Done when**: `gh workflow list` shows "Deploy preview API".
 
 - [ ] T020 Run the exit verification (no code change).
   - **Steps**: quickstart V1–V6 in order:
     - V6 is `gh workflow run deploy-preview-api.yml --ref 004-m3-preview-api`, then the curl
-      checks against the Cloud Run URL with a token from the hosted project.
+      checks against `PREVIEW_API_URL` with a token from the hosted project.
     - Record each result (command and output) in the milestone PR description.
   - **Then**:
-    - Mark T001–T020 `[x]` in this file and commit
-      `docs(m3): mark T001–T020 done after exit verification (T020)`.
+    - Mark T001–T021 `[x]` in this file and commit
+      `docs(m3): mark T001–T021 done after exit verification (T020)`.
     - Open `004-m3-preview-api` → `main`. Mostafa merges it.
   - **Done when**: every quickstart check matches its expected output and the milestone PR is
     open.
@@ -791,12 +807,13 @@ Start the branch: `git switch 004-m3-preview-api && git pull && git switch -c m3
 - **US3 (T011–T013)** depends on US1 and US2. Order: T011, then T012, then T013.
 - **US4 (T014–T018)** depends on US3. T014 comes before T015 (the image copies `server.mjs`).
   T016 and T018 can run alongside T014 and T015. T017 can be written at any point in US4.
-- **T019** needs PR 4 merged, Mostafa's approval and the wizard run. **T020** needs T019.
+- **T021** replaces the Cloud Run deploy. **T019** needs T021 merged, Mostafa's approval and the
+  Vercel setup. **T020** needs T019.
 
 ### Story completion order
 
 ```text
-T001 ─▶ T002 ─▶ US1 (PR 1) ─▶ US2 (PR 2) ─▶ US3 (PR 3) ─▶ US4 (PR 4) ─▶ T019 (PR → main) ─▶ T020 ─▶ milestone PR → main
+T001 ─▶ T002 ─▶ US1 (PR 1) ─▶ US2 (PR 2) ─▶ US3 (PR 3) ─▶ US4 (PR 4) ─▶ T021 ─▶ T019 (PR → main) ─▶ T020 ─▶ milestone PR → main
 ```
 
 ## Parallel examples
