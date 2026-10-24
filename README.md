@@ -93,22 +93,22 @@ To refresh stale values (for example after the local database was re-created), d
 
 All commands run from the repo root.
 
-| Command              | Runs                                                                                                                                                            | Notes                                                                       |
-| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------- |
-| `pnpm dev`           | `node scripts/dev.mjs`                                                                                                                                          | Starts the local stack. Must keep working after every merge.                |
-| `pnpm build`         | `turbo run build`                                                                                                                                               | Preview API `tsc` to `dist/`; extension `wxt build` to `.output/chrome-mv3` |
-| `pnpm lint`          | `turbo run lint lint:root`                                                                                                                                      | ESLint, shared flat config, plus the root config and `scripts`              |
-| `pnpm typecheck`     | `turbo run typecheck`                                                                                                                                           | `tsc --noEmit` (extension: `wxt prepare && tsc --noEmit`)                   |
-| `pnpm test`          | `turbo run test && vitest run --dir scripts`                                                                                                                    | Package tests, then the `scripts` tests                                     |
-| `pnpm format`        | `prettier --write .`                                                                                                                                            |                                                                             |
-| `pnpm format:check`  | `prettier --check .`                                                                                                                                            | Used by the `lint` CI job                                                   |
-| `pnpm db:start`      | `supabase start --workdir packages/database -x imgproxy,edge-runtime,logflare,vector,supavisor`                                                                 | Idempotent                                                                  |
-| `pnpm db:stop`       | `supabase stop --workdir packages/database`                                                                                                                     | Keeps data volumes                                                          |
-| `pnpm db:reset`      | `supabase db reset --workdir packages/database`                                                                                                                 | Re-applies migrations and `seed.sql`                                        |
-| `pnpm db:test`       | `supabase test db --workdir packages/database`                                                                                                                  | pgTAP                                                                       |
-| `pnpm db:types`      | `supabase gen types typescript --local --workdir packages/database > packages/database/src/types.gen.ts && prettier --write packages/database/src/types.gen.ts` | Committed output; CI checks drift                                           |
-| `pnpm db:new <name>` | `supabase migration new --workdir packages/database`                                                                                                            |                                                                             |
-| `pnpm db:push`       | `supabase db push --workdir packages/database`                                                                                                                  | Manual; never in CI                                                         |
+| Command              | Runs                                                                                                                                                            | Notes                                                                                                           |
+| -------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| `pnpm dev`           | `node scripts/dev.mjs`                                                                                                                                          | Starts the local stack. Must keep working after every merge.                                                    |
+| `pnpm build`         | `turbo run build`                                                                                                                                               | Preview API esbuild bundle to `apps/preview-api/dist/server.mjs`; extension `wxt build` to `.output/chrome-mv3` |
+| `pnpm lint`          | `turbo run lint lint:root`                                                                                                                                      | ESLint, shared flat config, plus the root config and `scripts`                                                  |
+| `pnpm typecheck`     | `turbo run typecheck`                                                                                                                                           | `tsc --noEmit` (extension: `wxt prepare && tsc --noEmit`)                                                       |
+| `pnpm test`          | `turbo run test && vitest run --dir scripts`                                                                                                                    | Package tests, then the `scripts` tests                                                                         |
+| `pnpm format`        | `prettier --write .`                                                                                                                                            |                                                                                                                 |
+| `pnpm format:check`  | `prettier --check .`                                                                                                                                            | Used by the `lint` CI job                                                                                       |
+| `pnpm db:start`      | `supabase start --workdir packages/database -x imgproxy,edge-runtime,logflare,vector,supavisor`                                                                 | Idempotent                                                                                                      |
+| `pnpm db:stop`       | `supabase stop --workdir packages/database`                                                                                                                     | Keeps data volumes                                                                                              |
+| `pnpm db:reset`      | `supabase db reset --workdir packages/database`                                                                                                                 | Re-applies migrations and `seed.sql`                                                                            |
+| `pnpm db:test`       | `supabase test db --workdir packages/database`                                                                                                                  | pgTAP                                                                                                           |
+| `pnpm db:types`      | `supabase gen types typescript --local --workdir packages/database > packages/database/src/types.gen.ts && prettier --write packages/database/src/types.gen.ts` | Committed output; CI checks drift                                                                               |
+| `pnpm db:new <name>` | `supabase migration new --workdir packages/database`                                                                                                            |                                                                                                                 |
+| `pnpm db:push`       | `supabase db push --workdir packages/database`                                                                                                                  | Manual; never in CI                                                                                             |
 
 ## Database
 
@@ -130,13 +130,13 @@ A paused free project must be resumed from the Supabase dashboard before link or
 
 ```text
 apps/extension/      Chrome extension (WXT + React, Manifest V3)
-apps/preview-api/    Express preview API
+apps/preview-api/    Express preview API ([README](apps/preview-api/README.md))
 packages/config/     Shared TypeScript, ESLint, and Prettier config
 packages/database/   Supabase project: config, migrations, seed, generated types
 packages/domain/     Shared rules: URL normalization, schemas, media types; client factory at @markme/domain/client
-scripts/             Local start script (pnpm dev) and its tests
+scripts/             Local start script (pnpm dev) and its tests; `archive/` keeps the retired GCP wizard
 docs/                Product requirements and plans
-specs/               Spec Kit specs (current: 003-m2-domain-package)
+specs/               Spec Kit specs (current: 004-m3-preview-api)
 ```
 
 ## Docs

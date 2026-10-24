@@ -3,7 +3,7 @@
 |                 |                                                           |
 | --------------- | --------------------------------------------------------- |
 | Owner           | Mostafa                                                   |
-| Status          | Draft v1.1                                                |
+| Status          | Draft v1.3                                                |
 | Date            | 2026-10-17                                                |
 | Source of truth | Mostafa's project brief + approved decisions (2026-10-17) |
 
@@ -11,7 +11,7 @@
 
 MarkMe lets users save web content (images, videos, posts, articles) by link. Each saved item shows a preview and can be organized with folders, tags and search. A user's collection is available on every device where they sign in.
 
-MarkMe is a learning and portfolio project with no financial goal. It is delivered in three versions, each finished and validated before the next starts:
+MarkMe starts as a learning and portfolio project. Mostafa plans paid plans later (section 10); until then it earns no money. It is delivered in three versions, each finished and validated before the next starts:
 
 1. **v1:** Chrome extension
 2. **v2:** Web application
@@ -40,18 +40,18 @@ MarkMe is a learning and portfolio project with no financial goal. It is deliver
 
 ## 4. Technology Stack
 
-| Area             | Technology                                                                                         |
-| ---------------- | -------------------------------------------------------------------------------------------------- |
-| Monorepo         | pnpm + Turborepo                                                                                   |
-| Language         | TypeScript everywhere                                                                              |
-| Chrome extension | React + WXT (Vite, Manifest V3)                                                                    |
-| Web app          | Next.js                                                                                            |
-| Mobile app       | React Native + Expo                                                                                |
-| Preview backend  | Express.js in Docker                                                                               |
-| Data platform    | Supabase (PostgreSQL, Auth, Realtime)                                                              |
-| Local infra      | Supabase CLI + Docker                                                                              |
-| Hosting          | Supabase Cloud (free), preview API on Google Cloud Run, web app on Cloudflare Workers via OpenNext |
-| UI design        | frontend-design + impeccable skills                                                                |
+| Area             | Technology                                                                                       |
+| ---------------- | ------------------------------------------------------------------------------------------------ |
+| Monorepo         | pnpm + Turborepo                                                                                 |
+| Language         | TypeScript everywhere                                                                            |
+| Chrome extension | React + WXT (Vite, Manifest V3)                                                                  |
+| Web app          | Next.js                                                                                          |
+| Mobile app       | React Native + Expo                                                                              |
+| Preview backend  | Express.js (Vercel Function; Dockerfile kept for local runs)                                     |
+| Data platform    | Supabase (PostgreSQL, Auth, Realtime)                                                            |
+| Local infra      | Supabase CLI + Docker                                                                            |
+| Hosting          | Supabase Cloud (free), preview API on Vercel (Hobby), web app on Cloudflare Workers via OpenNext |
+| UI design        | frontend-design + impeccable skills                                                              |
 
 ### Monorepo layout
 
@@ -218,6 +218,10 @@ packages/
 ## 10. Future (post v3)
 
 - Public sharing of items and collections.
+- Paid plans (monetization). Not scheduled. Today the preview API runs on Vercel Hobby, which is
+  for personal, non-commercial use only. MarkMe never pays Vercel; before the first paid feature
+  ships, the preview API moves to another host that allows commercial use, chosen with Mostafa's
+  approval (IMPLEMENTATION_PLAN A54).
 
 ## 11. Non-Functional Requirements
 
@@ -239,13 +243,14 @@ packages/
 
 ## 13. Risks
 
-| Risk                            | Mitigation                                          |
-| ------------------------------- | --------------------------------------------------- |
-| SSRF via preview API            | Protections in 7.3, dedicated test suite            |
-| Unauthorized data access        | RLS + multi-user tests, ownership from `auth.uid()` |
-| Cross-platform auth differences | Per-app storage adapter, shared client factory      |
-| Sync expectations               | Defined per version; offline editing in v2          |
-| Scope creep                     | Strict version order; non-goals enforced            |
+| Risk                            | Mitigation                                                           |
+| ------------------------------- | -------------------------------------------------------------------- |
+| SSRF via preview API            | Protections in 7.3, dedicated test suite                             |
+| Unauthorized data access        | RLS + multi-user tests, ownership from `auth.uid()`                  |
+| Cross-platform auth differences | Per-app storage adapter, shared client factory                       |
+| Sync expectations               | Defined per version; offline editing in v2                           |
+| Scope creep                     | Strict version order; non-goals enforced                             |
+| Hosting terms block paid plans  | Move the preview API to another host before launch; never pay Vercel |
 
 ## 14. Open Questions
 
@@ -259,6 +264,7 @@ packages/
 
 ## Changelog
 
+- v1.3 (2026-10-24): preview API hosting moves from Google Cloud Run to Vercel Hobby (IMPLEMENTATION_PLAN A51–A54); paid plans recorded as a future goal, with the move off non-commercial free plans before launch.
 - v1.2 (2026-10-20): `items.embed_html` replaced by `embed_provider` + `embed_id` (IMPLEMENTATION_PLAN §4 A19); the preview API returns embeds as provider + id.
 - v1.1 (2026-10-18): approved IMPLEMENTATION_PLAN §4 decisions A1 (`items.favicon_url`, filled by the preview API), A3 (multi-tag filter = all selected tags) and A7 option (a) (US-1: confirm email before first sign-in, per spike S0 Q3); US-1b notes the S0 Q4 linking behavior.
 - v1.0 (2026-10-17): approved.

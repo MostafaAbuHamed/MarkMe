@@ -21,22 +21,59 @@ function captureEnvError(source: Record<string, string | undefined>): EnvError {
 }
 
 describe("loadEnv", () => {
-  it("returns typed values and defaults an unset PORT to 8787", () => {
+  it("returns typed values and M3 defaults when only SUPABASE_URL is set", () => {
     const result = loadEnv({ SUPABASE_URL });
 
     expect(result).toEqual({
       PORT: 8787,
       SUPABASE_URL,
+      CORS_ORIGINS: ["chrome-extension://dapmmcamlgmaopfaicfjifakodajigha"],
+      RATE_LIMIT_IP_PER_MIN: 60,
+      RATE_LIMIT_USER_PER_MIN: 20,
+      RATE_LIMIT_USER_PER_DAY: 300,
+      RATE_LIMIT_FORCE_PER_HOUR: 10,
+      META_OEMBED_TOKEN: undefined,
     });
+  });
+
+  it('parses CORS_ORIGINS "a://x, b://y" into trimmed origins', () => {
+    const result = loadEnv({
+      SUPABASE_URL,
+      CORS_ORIGINS: "a://x, b://y",
+    });
+
+    expect(result.CORS_ORIGINS).toEqual(["a://x", "b://y"]);
+  });
+
+  const rateLimitKeys = [
+    "RATE_LIMIT_IP_PER_MIN",
+    "RATE_LIMIT_USER_PER_MIN",
+    "RATE_LIMIT_USER_PER_DAY",
+    "RATE_LIMIT_FORCE_PER_HOUR",
+  ] as const;
+
+  it.each(rateLimitKeys.flatMap((key) => ["0", "-1", "abc"].map((value) => [key, value])))(
+    "reports %s=%s as invalid",
+    (key, value) => {
+      const error = captureEnvError({ SUPABASE_URL, [key]: value });
+
+      expect(error.issues.map((issue) => issue.key)).toEqual([key]);
+    },
+  );
+
+  it("treats a blank META_OEMBED_TOKEN as unset, like every other key", () => {
+    expect(loadEnv({ SUPABASE_URL, META_OEMBED_TOKEN: "  " }).META_OEMBED_TOKEN).toBeUndefined();
+  });
+
+  it("keeps a non-empty META_OEMBED_TOKEN", () => {
+    expect(loadEnv({ SUPABASE_URL, META_OEMBED_TOKEN: "t" }).META_OEMBED_TOKEN).toBe("t");
   });
 
   it('coerces PORT "3000" to the number 3000', () => {
     const result = loadEnv({ PORT: "3000", SUPABASE_URL });
 
-    expect(result).toEqual({
-      PORT: 3000,
-      SUPABASE_URL,
-    });
+    expect(result.PORT).toBe(3000);
+    expect(result.SUPABASE_URL).toBe(SUPABASE_URL);
   });
 
   it("reports a missing SUPABASE_URL", () => {
@@ -128,6 +165,17 @@ describe("loadEnv", () => {
   });
 
   it("covers every key of previewApiEnvSchema", () => {
-    expect(Object.keys(previewApiEnvSchema.shape).sort()).toEqual(["PORT", "SUPABASE_URL"]);
+    expect(Object.keys(previewApiEnvSchema.shape).sort()).toEqual(
+      [
+        "CORS_ORIGINS",
+        "META_OEMBED_TOKEN",
+        "PORT",
+        "RATE_LIMIT_FORCE_PER_HOUR",
+        "RATE_LIMIT_IP_PER_MIN",
+        "RATE_LIMIT_USER_PER_DAY",
+        "RATE_LIMIT_USER_PER_MIN",
+        "SUPABASE_URL",
+      ].sort(),
+    );
   });
 });

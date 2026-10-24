@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Current state
 
 M0 (monorepo foundation) is implemented: `apps/extension` (WXT popup placeholder),
-`apps/preview-api` (only `GET /healthz`), `packages/config`, `packages/domain`, `packages/database`.
+`apps/preview-api` (Express), `packages/config`, `packages/domain`, `packages/database`.
 
 M1 (database schema) is implemented, data layer only: tables `profiles`, `folders`, `tags`,
 `items`, `item_tags` with RLS and column-level grants, plus the `search_items` RPC. Internal
@@ -20,7 +20,17 @@ built from `@markme/database` `Constants`). The Supabase client factory `createM
 is only at `@markme/domain/client`; a lint rule keeps `supabase-js` out of the rules entry.
 The domain `test` script runs coverage and fails below 100% lines/branches on `src/url/**`
 (the text table hides fully covered files); focused runs:
-`pnpm --filter @markme/domain exec vitest run <file>`. No app uses the exports yet.
+`pnpm --filter @markme/domain exec vitest run <file>`. `apps/preview-api` uses the rules entry.
+
+M3 (preview API) is implemented. `apps/preview-api` exposes `POST /v1/preview` plus
+`GET /healthz`: Supabase JWT auth (ES256), SSRF-safe fetch, metadata/oEmbed pipeline with a
+24 h LRU cache, and rate limits. Production build is esbuild: `dist/server.mjs` (listens; Docker and local) and
+`dist/vercel/index.mjs` (`src/vercel.ts`, default-exports the app). Dockerfile and CI
+`preview-api-image` job build the image. `.github/workflows/deploy-preview-api.yml` writes
+`.vercel/output` (`scripts/vercel-output.mjs`) and runs `vercel deploy --prebuilt --prod` to
+Vercel Hobby, region `fra1` (not deployed yet). Hobby is non-commercial only: before MarkMe ships
+a paid feature, the preview API moves to another host; we never pay Vercel (constitution, A54). The GCP
+wizard is retired in `scripts/archive/`.
 
 Hosted Supabase project `markme` (free, `eu-central-1`) runs the same migrations. `pnpm db:push` is
 the manual production step after a migration PR merges (needs `supabase link` once; the ref lives in
@@ -84,7 +94,7 @@ pnpm + Turborepo monorepo, strict TypeScript everywhere:
 
 - `apps/extension` — WXT + React, Manifest V3 (v1). Surfaces: popup (quick save), side panel
   (library, search, folder/tag management), background worker (auth refresh, context menu).
-- `apps/preview-api` — Express in Docker, Cloud Run. `POST /v1/preview` with the user's Supabase
+- `apps/preview-api` — Express on Vercel (Hobby, `fra1`); Dockerfile for local runs. `POST /v1/preview` with the user's Supabase
   JWT. The only place that fetches arbitrary URLs.
 - `apps/web` (v2, Next.js on Cloudflare Workers via OpenNext), `apps/mobile` (v3, Expo) — not
   created until their version starts.

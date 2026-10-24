@@ -82,14 +82,14 @@ M3 and M4 can run in parallel. M2 uses M1's generated types and enums, so it sta
 
 ### M3. Preview API
 
-- Express in Docker; `POST /v1/preview` with Supabase JWT verification.
+- Express (esbuild bundle; Dockerfile for local runs); `POST /v1/preview` with Supabase JWT verification.
 - Pipeline: validate -> cache -> oEmbed (YouTube, X, Instagram) -> HTML metadata (OG, Twitter Cards, meta) -> sanitize -> cache 24h.
 - Each oEmbed provider is optional: if it is unavailable (e.g. Instagram needs a Meta app token), fall back to HTML metadata.
 - Full SSRF protections (PRD 7.3): scheme/port, DNS resolve + IP blocklist v4/v6, connect to validated IP, re-check each redirect, 3 redirects, 5 s, 2 MB, content-type allowlist, no cookies, fixed UA.
 - Per-user and per-IP rate limits (IP before auth); forced-refresh flag rate-limited.
-- Cache and rate limits are in memory for v1 (per instance, lost on scale-to-zero). The M3 plan records this choice and the Cloud Run max-instances setting.
+- Cache and rate limits are in memory for v1 (per instance, lost when an instance stops). Vercel Hobby cannot cap instances, so limits are per instance (IMPLEMENTATION_PLAN A53).
 - Embeds only from allowlisted providers, returned as provider + validated id, never HTML.
-- Deployed to Cloud Run (`europe-west1`) from CI (walking skeleton), with no secrets yet (any later one goes in from the host's secret store via `--set-secrets`); a manual dispatch deploys from the milestone branch for the exit check.
+- Deployed to Vercel (Hobby, `fra1`) from CI as a prebuilt function (walking skeleton), with no app secrets yet (any later one goes in Vercel's environment variables); a manual dispatch deploys from the milestone branch for the exit check.
 - **Tests (written before the fetcher):** SSRF suite (private IPs, rebinding, internal redirects), limits, content types, parsing fixtures, oEmbed, rate limits.
 - **Exit:** all SSRF cases blocked in CI; image builds; runs locally via `pnpm dev`; deployed endpoint answers with a valid JWT and rejects SSRF cases.
 
@@ -137,7 +137,7 @@ M3 and M4 can run in parallel. M2 uses M1's generated types and enums, so it sta
 - Context menu "Save to MarkMe" for page, link, image (optional US-7).
 - Playwright E2E smoke finalized: sign in -> save -> search.
 - Final accessibility audit (keyboard, WCAG AA contrast) and perf check against PRD 11 budgets.
-- Production config: extension build pointing to the Supabase Cloud project and Cloud Run URL; verify the service-role key is absent from the extension bundle.
+- Production config: extension build pointing to the Supabase Cloud project and the Vercel preview API URL; verify the service-role key is absent from the extension bundle.
 - Release: production build zipped as a GitHub release, with load-unpacked install steps in the README. Chrome Web Store publishing is out of scope for v1.
 - README: setup, architecture diagram, screenshots.
 - **Exit:** PRD 7.7 definition of done met.
@@ -166,18 +166,19 @@ M3 and M4 can run in parallel. M2 uses M1's generated types and enums, so it sta
 
 ## 4. Risks to watch during v1
 
-| Risk                                                                                                               | Where  | Mitigation                                                                 |
-| ------------------------------------------------------------------------------------------------------------------ | ------ | -------------------------------------------------------------------------- |
-| Google OAuth in extensions is fiddly (redirect URLs, extension ID)                                                 | M4     | Spike before the M4 spec; pin the manifest `key`                           |
-| Google sign-in vs. a password account with an unconfirmed email may not link (or may drop the unverified identity) | M4     | Test in the spike; record the chosen behavior in the M4 spec               |
-| SSRF gaps                                                                                                          | M3     | Test suite written before the fetcher                                      |
-| Instagram oEmbed needs a Meta app token; X oEmbed terms can change                                                 | M3     | Check access in the spike; every provider falls back to HTML metadata      |
-| In-memory cache and rate limits reset on Cloud Run scale-to-zero and are per instance                              | M3     | Accepted for v1; record in the M3 plan; cap max instances                  |
-| FTS with tags is tricky to keep in sync                                                                            | M1     | Decide trigger vs. search-time join in M1 plan; test ranking               |
-| MV3 popup closes on blur, leaving items stuck at `pending`                                                         | M5     | Preview request runs in the background worker; retry stale `pending` items |
-| Extension popup speed                                                                                              | M5     | Measure early; keep popup bundle small                                     |
-| Production-only problems found late (CORS, auth redirect URLs, cold starts)                                        | M1, M3 | Cloud project in M1, Cloud Run deploy in M3                                |
-| Supabase free tier pauses inactive projects, so the demo may be down                                               | M8     | Document how to resume it in the README                                    |
+| Risk                                                                                                               | Where  | Mitigation                                                                    |
+| ------------------------------------------------------------------------------------------------------------------ | ------ | ----------------------------------------------------------------------------- |
+| Google OAuth in extensions is fiddly (redirect URLs, extension ID)                                                 | M4     | Spike before the M4 spec; pin the manifest `key`                              |
+| Google sign-in vs. a password account with an unconfirmed email may not link (or may drop the unverified identity) | M4     | Test in the spike; record the chosen behavior in the M4 spec                  |
+| SSRF gaps                                                                                                          | M3     | Test suite written before the fetcher                                         |
+| Instagram oEmbed needs a Meta app token; X oEmbed terms can change                                                 | M3     | Check access in the spike; every provider falls back to HTML metadata         |
+| In-memory cache and rate limits reset when a Vercel instance stops and are per instance                            | M3     | Accepted for v1 (A53); the per-user daily limit still caps abuse per instance |
+| FTS with tags is tricky to keep in sync                                                                            | M1     | Decide trigger vs. search-time join in M1 plan; test ranking                  |
+| MV3 popup closes on blur, leaving items stuck at `pending`                                                         | M5     | Preview request runs in the background worker; retry stale `pending` items    |
+| Extension popup speed                                                                                              | M5     | Measure early; keep popup bundle small                                        |
+| Production-only problems found late (CORS, auth redirect URLs, cold starts)                                        | M1, M3 | Cloud project in M1, Vercel deploy in M3                                      |
+| Vercel Hobby forbids commercial use; paid plans are planned                                                        | later  | Move the preview API to another host before launch; never pay Vercel (A54)    |
+| Supabase free tier pauses inactive projects, so the demo may be down                                               | M8     | Document how to resume it in the README                                       |
 
 ## 5. Next step
 
@@ -186,6 +187,7 @@ Run the OAuth/oEmbed spike, and write the `/speckit-specify` input for **M0 Mono
 ## Changelog
 
 - v1.5 (2026-10-23): M3 bullets updated for the M3 design review (IMPLEMENTATION_PLAN §4 A37–A50).
+- v1.5 (2026-10-24): preview API hosting moves from Cloud Run to Vercel Hobby (IMPLEMENTATION_PLAN A51–A54); risk added for the non-commercial Hobby terms.
 - v1.4 (2026-10-22): one PR per user story (IMPLEMENTATION_PLAN A36); provider-aware URL merging added to Later (A24); M2 depends on M0 + M1.
 - v1.3 (2026-10-20): M1 and M3 bullets updated for the M1 design review (IMPLEMENTATION_PLAN §4 A13–A20).
 - v1.2 (2026-10-17): linked IMPLEMENTATION_PLAN.md (technical design, tasks, spike S0 steps).

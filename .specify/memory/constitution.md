@@ -1,4 +1,20 @@
 <!--
+Sync Impact Report (1.1.4, 2026-10-24)
+- Version change: 1.1.3 → 1.1.4 (PATCH, approved by Mostafa)
+- Technology Constraints, Preview API: "Express.js in Docker, deployed to Google Cloud Run"
+  replaced by a Vercel Function on the free Hobby plan, deployed from the esbuild bundle, with the
+  Dockerfile kept for local runs and portability. Reason: Cloud Run needs an active billing
+  account and Google asked for a $30 prepayment, which Mostafa declined; Vercel Hobby needs no
+  card (decisions A51–A54).
+- Technology Constraints: new line on monetization. Vercel Hobby allows personal, non-commercial
+  use only, and Mostafa plans paid plans later. MarkMe never pays Vercel: no upgrade to a paid
+  Vercel plan. Before MarkMe earns money, the preview API moves to another host that allows
+  commercial use, chosen with Mostafa's approval.
+- CLAUDE.md, docs/PRD.md §3, docs/PLAN.md M3/M8, docs/IMPLEMENTATION_PLAN.md and
+  specs/004-m3-preview-api changed in the same change.
+- Templates: none name the host; unchanged.
+- Principles: unchanged.
+
 Sync Impact Report (1.1.3, 2026-10-22)
 - Version change: 1.1.2 → 1.1.3 (PATCH, approved by Mostafa)
 - Development Workflow: "one commit and one PR per task" replaced by one commit per task and one
@@ -121,7 +137,8 @@ and a spec disagree, this constitution wins until amended.
   `storage`, `contextMenus`, `sidePanel`, host permissions only for the preview API and Supabase).
 - Web (v2): Next.js on Cloudflare Workers via `@opennextjs/cloudflare`. Mobile (v3): React
   Native + Expo.
-- Preview API: Express.js in Docker, deployed to Google Cloud Run.
+- Preview API: Express.js, deployed as a Vercel Function (free Hobby plan, region `fra1`) from
+  its esbuild bundle. The Dockerfile stays for local runs and to keep the service portable.
 - Data and auth: Supabase (Postgres, Auth, Realtime). Supabase Cloud free plan in production;
   Supabase CLI + Docker locally.
 - Auth: email + password and Google sign-in (extension uses `chrome.identity.launchWebAuthFlow`);
@@ -129,6 +146,10 @@ and a spec disagree, this constitution wins until amended.
   unconfirmed password sign-in; spike S0 Q3).
 - Search: PostgreSQL full-text search over title, description, note, URL and tag names.
 - Stay within free tiers; any paid service needs Mostafa's approval.
+- Monetization: Mostafa plans paid plans for MarkMe later. Free plans that forbid commercial use
+  (Vercel Hobby today) are allowed only until MarkMe earns money. MarkMe pays Vercel nothing: no
+  paid Vercel plan, ever. Before the first paid feature ships, the preview API moves to another
+  host that allows commercial use, chosen with Mostafa's approval.
 
 ## Development Workflow
 
@@ -154,4 +175,4 @@ and a spec disagree, this constitution wins until amended.
 - Reviews check compliance; unjustified complexity is rejected.
 - Runtime guidance for agents lives in `CLAUDE.md`, which must not contradict this document.
 
-**Version**: 1.1.3 | **Ratified**: 2026-10-17 | **Last Amended**: 2026-10-22
+**Version**: 1.1.4 | **Ratified**: 2026-10-17 | **Last Amended**: 2026-10-24
