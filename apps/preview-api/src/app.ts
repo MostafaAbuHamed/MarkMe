@@ -44,7 +44,7 @@ export function createApp({ env, jwks, safeFetch, log, routes }: AppOptions): Ex
 
   app.use(createCors(env.CORS_ORIGINS));
   app.use(createRequestLog(log ?? defaultLogWriter));
-  app.use(limiters.ip);
+  app.use("/v1/preview", limiters.ip);
 
   app.use(express.json({ limit: "4kb" }));
 

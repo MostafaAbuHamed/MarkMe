@@ -425,4 +425,25 @@ describe("rate limits", () => {
     expect(stillAllowed.status).toBe(401);
     assertRateLimitHeaders(stillAllowed.headers);
   });
+
+  it("does not rate limit GET /healthz or spend the preview IP budget", async () => {
+    const { safeFetch, baseUrl } = await okTargetServer();
+    const app = createApp({ env: rateLimitEnv, jwks, safeFetch });
+
+    for (let i = 0; i < 8; i++) {
+      const response = await request(app).get("/healthz");
+      expect(response.status).toBe(200);
+      expect(response.body).toEqual({ ok: true });
+      expect(response.headers.ratelimit).toBeUndefined();
+      expect(response.headers["ratelimit-policy"]).toBeUndefined();
+    }
+
+    const preview = await request(app)
+      .post("/v1/preview")
+      .set("Content-Type", "application/json")
+      .send({ url: baseUrl });
+
+    expect(preview.status).toBe(401);
+    expect(preview.body).toEqual({ error: "unauthorized" });
+  });
 });
