@@ -5,7 +5,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Current state
 
 M0 (monorepo foundation) is implemented: `apps/extension` (WXT popup placeholder),
-`apps/preview-api` (only `GET /healthz`), `packages/config`, `packages/domain`, `packages/database`.
+`apps/preview-api` (Express), `packages/config`, `packages/domain`, `packages/database`.
 
 M1 (database schema) is implemented, data layer only: tables `profiles`, `folders`, `tags`,
 `items`, `item_tags` with RLS and column-level grants, plus the `search_items` RPC. Internal
@@ -20,7 +20,13 @@ built from `@markme/database` `Constants`). The Supabase client factory `createM
 is only at `@markme/domain/client`; a lint rule keeps `supabase-js` out of the rules entry.
 The domain `test` script runs coverage and fails below 100% lines/branches on `src/url/**`
 (the text table hides fully covered files); focused runs:
-`pnpm --filter @markme/domain exec vitest run <file>`. No app uses the exports yet.
+`pnpm --filter @markme/domain exec vitest run <file>`. `apps/preview-api` uses the rules entry.
+
+M3 (preview API) is implemented. `apps/preview-api` exposes `POST /v1/preview` plus
+`GET /healthz`: Supabase JWT auth (ES256), SSRF-safe fetch, metadata/oEmbed pipeline with a
+24 h LRU cache, and rate limits. Production build is an esbuild single file (`dist/server.mjs`);
+Dockerfile and CI `preview-api-image` job build the image; `.github/workflows/deploy-preview-api.yml`
+deploys to Cloud Run via WIF after `scripts/setup-gcp.sh` (not deployed yet).
 
 Hosted Supabase project `markme` (free, `eu-central-1`) runs the same migrations. `pnpm db:push` is
 the manual production step after a migration PR merges (needs `supabase link` once; the ref lives in
