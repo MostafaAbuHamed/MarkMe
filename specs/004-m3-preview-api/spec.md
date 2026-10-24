@@ -307,15 +307,18 @@ milestone branch; check the deployed health endpoint and the exit-verification r
 **Packaging and deploy (Story 4)**
 
 - **FR-023**: The service MUST build into a container image that runs as a non-root user with a
-  health check, and CI MUST prove the image builds.
-- **FR-024**: Deploys MUST run from CI on pushes to `main` touching the service and on manual
-  dispatch, authenticate through federated identity limited to this repository's `main` and `NNN-*`
-  branches, tag images with the commit, and deploy to the public region `europe-west1` with at most
-  one instance and scale to zero (A46–A48). No secret is needed in v1; a later one comes from the
-  host's secret store.
-- **FR-025**: The image registry MUST keep only the 3 most recent images (A48).
-- **FR-026**: A guided setup script MUST walk Mostafa through the console-only cloud steps,
-  including the billing link and a $1 budget alert (A49).
+  health check, and CI MUST prove the image builds. The image is for local runs and portability;
+  production does not use it (A52, A54).
+- **FR-024** _(amended 2026-10-24, A51–A52)_: Deploys MUST run from CI on pushes to `main`
+  touching the service and on manual dispatch from `main` or `NNN-*` branches only, ship the
+  esbuild bundle as a prebuilt Vercel Function in region `fra1` on the free Hobby plan, and
+  smoke-test the production URL. The Vercel token is the only GitHub secret; ids and URLs are
+  repository variables. A later app secret goes in the Vercel project's environment variables.
+- **FR-025** _(withdrawn 2026-10-24)_: The Cloud Run image-registry cleanup no longer applies;
+  Vercel keeps its own deployment history.
+- **FR-026** _(amended 2026-10-24)_: The README MUST list the one-time Vercel steps (account
+  without a card, `vercel link`, token, `gh secret`/`gh variable` commands). The GCP wizard is
+  archived in `scripts/archive/`.
 - **FR-027**: `pnpm dev` MUST keep starting the service locally with the rest of the stack.
 
 **Quality gate**
@@ -368,13 +371,13 @@ milestone branch; check the deployed health endpoint and the exit-verification r
 - The pinned extension origin `chrome-extension://dapmmcamlgmaopfaicfjifakodajigha` is the only
   browser caller in v1; extension pages with host permissions skip cross-origin checks anyway, so
   the origin list is defense in depth (A44).
-- In-memory cache and counters per instance, lost on scale to zero, are accepted for v1, with at most
-  one instance (`docs/PLAN.md` M3).
+- In-memory cache and counters per instance, lost when an instance stops, are accepted for v1.
+  Vercel Hobby cannot cap instances, so limits apply per instance (A53).
 - Writing the preview into the saved item is the client's job (M5); this service only returns it.
-- The GCP project, billing link and federated identity need Mostafa's manual steps through the
-  guided setup; `gcloud` is not installed yet and no cloud project exists (2026-10-23). Cloud Run
-  needs a billing account even on the free tier, which Mostafa approved with a $1 budget alert
-  (A49).
+- Hosting changed on 2026-10-24: Cloud Run needs an active billing account and Google asked for a
+  $30 prepayment, which Mostafa declined. The service deploys to Vercel Hobby (no card) instead
+  (A51). Hobby is non-commercial only; Mostafa plans paid plans later and will not pay Vercel, so
+  the service moves to another host before the first paid feature (A54).
 - New dependencies (token verification, address parsing, HTTP client agent, HTML parser, cache,
   rate limiter) are justified in the plan, as the constitution requires.
 - Delivery: one commit per task and one PR per user story into `004-m3-preview-api`, in order

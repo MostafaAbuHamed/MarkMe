@@ -32,8 +32,8 @@ arbitrary links. It exposes one endpoint, `POST /v1/preview`, for signed-in user
     workspace's TS packages.
   - Image: a `node:24-slim` image that runs as `node`.
   - CI: an image job.
-  - Deploy: a Cloud Run deploy through WIF from `main` or a milestone branch, plus a wizard for the
-    console-only GCP steps (R15).
+  - Deploy: a prebuilt Vercel Function (Hobby, `fra1`) from `main` or a milestone branch (R18,
+    which replaces the Cloud Run deploy and GCP wizard of R15).
 
 ## Technical Context
 
@@ -68,7 +68,7 @@ the Supabase JWKS.
 
 **Target Platform**:
 
-- Linux container `node:24-slim` on Google Cloud Run (`europe-west1`, IPv4 egress).
+- Vercel Function, `nodejs24.x`, region `fra1` (R18). The `node:24-slim` image runs locally and in CI.
 - Locally, `tsx watch` through `pnpm dev`.
 
 **Project Type**: An HTTP web service (`apps/preview-api`) in the pnpm + Turborepo monorepo.
@@ -77,17 +77,16 @@ the Supabase JWKS.
 
 - A cache hit answers without any outbound request.
 - A cache miss is bounded by the 5 s total deadline.
-- No throughput target. Max one instance at concurrency 80 is enough for manual saves (A38, A48).
+- No throughput target. Vercel scales instances on demand; manual saves need little (A38, A53).
 
 **Constraints**:
 
 - The SSRF rules of PRD 7.3 and constitution I, without exception.
-- 256 MiB memory. 80 concurrent × 2 MB of body is a **lower bound** of about 160 MB. Parsed DOMs
-  (a few times the HTML), the LRU (5,000 small previews, a few MB) and Node's baseline
-  (~60 MB) sit on top of it. That is tight only at the theoretical 80-request peak, which
-  manual saves never reach (A38). If memory alerts fire, lower `--concurrency`, not the 2 MB cap.
-- Free tiers only, with a $1 budget alert (A49).
-- No secrets in git or GitHub secrets: WIF plus repository variables (A47).
+- Memory: Hobby functions get 2 GB, far above the 2 MB body cap per request plus the LRU.
+- Free tiers only: Vercel Hobby (1M invocations, 4 active-CPU hours a month), non-commercial
+  (A54).
+- No secrets in git. One GitHub secret, `VERCEL_TOKEN`; ids and URLs are repository variables
+  (A52).
 - `pnpm dev` keeps working.
 
 **Scale/Scope**:
@@ -115,7 +114,7 @@ _GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design (below
 | I. Per-user and per-IP rate limits                                                         | IP before auth, user after it, plus force (R8); `app` suite                                                                                                   | ✅     |
 | I. Sanitized output; embeds as provider + validated id, never HTML                         | `sanitizeText` on every string, then `previewResponse.parse`. Embed only `{ youtube, id }` with `YOUTUBE_ID_PATTERN` (R10, R12)                               | ✅     |
 | I. SSRF tests before the fetcher                                                           | T2 commits all six suites with executed bodies (`it.fails` against a stub); T3 adds the fetcher and turns them on (R16)                                       | ✅     |
-| I. Secrets only in env files / host secret store; none in git                              | No secret exists in v1. WIF instead of a key; ids are repository variables. `META_OEMBED_TOKEN` would come through `--set-secrets` (A47)                      | ✅     |
+| I. Secrets only in env files / host secret store; none in git                              | No app secret in v1. The deploy token lives in GitHub secrets; ids are repository variables. `META_OEMBED_TOKEN` would go in Vercel env vars (A52)            | ✅     |
 | II. Shared contracts from `packages/domain`                                                | Request, response, error codes, limits, URL, provider and media-type rules are all imported, never redefined. No Supabase client in the service               | ✅     |
 | III. Preview API tests: SSRF, limits, parsing fixtures, oEmbed, rate limits                | One suite per area (contract "Files"); every spec scenario is mapped to a case                                                                                | ✅     |
 | III. Never skip or weaken a test                                                           | `it.fails` → `it` only makes tests stricter. The production policy has its own suite that blocks loopback                                                     | ✅     |
@@ -124,7 +123,7 @@ _GATE: Must pass before Phase 0 research. Re-checked after Phase 1 design (below
 | IV. YAGNI                                                                                  | No per-user cache, no shared limiter store, no NAT64 embedded-address logic (R5), no secret store entries                                                     | ✅     |
 | V. Save never blocks on preview                                                            | The service is stateless toward items. The `pending` → `ok`/`failed` flow is M5                                                                               | ✅ n/a |
 | VI. Quality UX                                                                             | No UI. Stable error codes let M5 show a specific message                                                                                                      | ✅ n/a |
-| Tech: Express in Docker on Cloud Run; free tiers                                           | Yes. A billing account is required by Cloud Run even on the free tier; Mostafa approved it with a $1 alert (A49)                                              | ✅     |
+| Tech: Express as a Vercel Function (Hobby, `fra1`); free tiers (constitution 1.1.4)        | Yes. Prebuilt function from the esbuild bundle; Dockerfile kept; non-commercial until paid plans, then move (A51–A54)                                         | ✅     |
 | Workflow: one commit per task, one PR per story; `pnpm dev` keeps working                  | US1 → US4 into `004-m3-preview-api` (A50). `pnpm dev` still runs `tsx watch src/server.ts`                                                                    | ✅     |
 
 **Gate result: PASS.** No violations, so Complexity Tracking is empty.
@@ -183,7 +182,9 @@ apps/preview-api/
 └── test/                       # one suite per module + helpers + fixtures
 .github/workflows/ci.yml                  # + preview-api-image job
 .github/workflows/deploy-preview-api.yml  # new
-scripts/setup-gcp.sh                      # wizard
+apps/preview-api/src/vercel.ts            # Vercel entry (R18)
+apps/preview-api/scripts/vercel-output.mjs # .vercel/output writer (R18)
+scripts/archive/setup-gcp.sh              # retired GCP wizard
 docs/IMPLEMENTATION_PLAN.md               # deviations 1–6; changelog
 ```
 
@@ -193,7 +194,7 @@ The full file list is in [contracts/preview-api.md](contracts/preview-api.md#fil
 
 - All service code stays in `apps/preview-api`. `packages/domain` is consumed, not changed: every
   shape and rule M3 needs already exists from M2.
-- Repo-level additions are the CI job, the deploy workflow and the wizard.
+- Repo-level additions are the CI job and the deploy workflow.
 
 ### Task shape
 
@@ -202,7 +203,7 @@ The full file list is in [contracts/preview-api.md](contracts/preview-api.md#fil
 | US1 Secure fetch | **T1** env keys + error mapper + CORS + 4 KB body + `log.ts` + ES256 JWKS auth (+ tests). **T2** `ip-policy.ts` + its suite green; five `safe-fetch` suites as `it.fails` against a stub. **T3** `resolve.ts` + `safe-fetch.ts`; suites flipped to `it` | M1, M2     |
 | US2 Metadata     | **T4** `sanitize.ts` + `html-metadata.ts` + fixtures (charset, relative URLs, private image hosts). **T5** oEmbed adapters (YouTube embed id, X/Instagram blockquote text, fallback, optional token)                                                    | US1        |
 | US3 Endpoint     | **T6** cache + pipeline + `POST /v1/preview` + `app.test.ts` (status map, cache hit, direct image, empty page, logs). **T7** IP/user/force limiters + `Retry-After` + tests                                                                             | US1, US2   |
-| US4 Ship         | **T8** esbuild build + Dockerfile + `.dockerignore` + `preview-api-image` CI job (build + `/healthz` run). **T9** `setup-gcp.sh` wizard + `deploy-preview-api.yml` (WIF, SHA tag, cleanup policy, smoke) + README                                       | US3        |
+| US4 Ship         | **T8** esbuild build + Dockerfile + `.dockerignore` + `preview-api-image` CI job (build + `/healthz` run). **T9** `deploy-preview-api.yml` + README; replaced by T021 (Vercel, R18)                                                                     | US3        |
 
 Close-out (milestone branch, before merging to `main`):
 

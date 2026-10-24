@@ -99,30 +99,21 @@ The service's stdout shows one JSON line per request, with `host` and no path.
    `004-m3-preview-api`.
 2. The workflow's smoke step passes: `/healthz` returns 200, and an unsigned `POST /v1/preview`
    returns 401.
-3. Repeat V5's requests with `API=<Cloud Run URL>`. Use a token from the **hosted** project
+3. Repeat V5's requests with `API=<PREVIEW_API_URL>`. Use a token from the **hosted** project
    (`SUPABASE_URL` in the deploy env is the hosted URL).
 
    Expected: 401 / 200 / 422 / 200, as in V5.
 
-4. Run `gcloud artifacts docker images list europe-west1-docker.pkg.dev/<project>/markme/preview-api`.
-   After more than three deploys, it lists at most 3 images (A48).
+4. In the Vercel dashboard, the deployment's function runs in `fra1` (R18).
 
-## V7. One-time cloud setup (FR-026, A49)
+## V7. One-time cloud setup (FR-026, A51–A52)
 
-```bash
-bash scripts/setup-gcp.sh
-```
-
-The wizard does the following:
-
-- It asks before it installs `gcloud`.
-- It walks through project, billing, the $1 budget, the APIs, the registry with its cleanup
-  policy, WIF and the deploy account.
-- It ends by printing the four `gh variable set` commands it ran.
+Follow "One-time setup" in `apps/preview-api/README.md`: a Vercel account (no card), `vercel link`,
+a token, then `gh secret set VERCEL_TOKEN` and the `gh variable set` commands.
 
 Expected afterwards:
 
-- `gh variable list` shows `GCP_PROJECT_ID`, `GCP_WIF_PROVIDER`, `GCP_DEPLOY_SA` and
-  `PREVIEW_API_SUPABASE_URL`.
-- `gh secret list` shows nothing new.
-- The Billing → Budgets page shows a $1 budget.
+- `gh variable list` shows `VERCEL_ORG_ID`, `VERCEL_PROJECT_ID`, `PREVIEW_API_SUPABASE_URL` and
+  `PREVIEW_API_URL`.
+- `gh secret list` shows `VERCEL_TOKEN` only.
+- No Git repository is connected in the Vercel project settings.

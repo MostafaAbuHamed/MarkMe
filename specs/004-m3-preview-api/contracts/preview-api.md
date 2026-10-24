@@ -233,7 +233,9 @@ apps/preview-api/
     └── app.test.ts                # T6, T7
 .github/workflows/ci.yml           # T8: + preview-api-image job
 .github/workflows/deploy-preview-api.yml        # T9
-scripts/setup-gcp.sh               # T9 wizard
+apps/preview-api/src/vercel.ts     # T021 Vercel entry
+apps/preview-api/scripts/vercel-output.mjs   # T021 .vercel/output writer
+scripts/archive/setup-gcp.sh       # retired T9 wizard (Cloud Run dropped, R18)
 docs/IMPLEMENTATION_PLAN.md        # plan deviations copied back in v1.9 (done in /speckit-plan)
 CLAUDE.md                          # current-state paragraph for M3 (close-out)
 ```

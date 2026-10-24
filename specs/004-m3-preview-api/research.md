@@ -352,6 +352,35 @@ this change (v1.9), as its change rule requires.
 - **Alternatives considered**: `it.todo` (no assertions exist before the fetcher); committing red
   tests (breaks the required `test` check).
 
+## R18. Hosting moves to Vercel Hobby (2026-10-24; replaces the deploy and wizard parts of R15)
+
+- **Finding**: Cloud Run needs an active billing account even on the free tier. Opening one,
+  Google asked for a $30 prepayment. Mostafa declined, and the account was closed with $0 spent.
+- **Decision** (A51–A54, approved by Mostafa):
+  - One Vercel Function on the free Hobby plan (no card), region `fra1`.
+  - `scripts/build.mjs` adds a second esbuild entry, `src/vercel.ts` → `dist/vercel/index.mjs`,
+    which default-exports the Express app (an Express app is a valid Node request handler).
+  - `scripts/vercel-output.mjs` writes `.vercel/output` (Build Output API v3): `index.func` with
+    `nodejs24.x`, `launcherType: Nodejs`, `regions: ["fra1"]`, `maxDuration: 30` and
+    `SUPABASE_URL`/`CORS_ORIGINS` in `environment`; `config.json` routes every path to it.
+  - `deploy-preview-api.yml`: same triggers as A47; a first step refuses refs other than `main`
+    and `NNN-*` (the guard the WIF condition gave); install, build, write the output, then
+    `npx vercel@63.1.2 deploy --prebuilt --prod --token "$VERCEL_TOKEN"`; smoke checks on
+    `vars.PREVIEW_API_URL` (per-deployment URLs sit behind Vercel Authentication).
+  - The Dockerfile and `preview-api-image` job stay; the GCP wizard moves to `scripts/archive/`.
+  - `trust proxy` stays `1`: Vercel overwrites `X-Forwarded-For` with the client IP and does not
+    forward client-sent values.
+  - Cache and limits stay in memory per instance; Hobby cannot cap instances (A53).
+- **Rationale**: no card and no prepayment; `fra1` is Supabase's city; shipping our own bundle
+  avoids a Vercel build of the workspace, whose `@markme/domain` exports TS source (R1).
+- **Alternatives considered**: Cloud Run with the prepayment; Render free (often asks for a card;
+  sleeps after 15 minutes); Koyeb and Railway (no free compute); Vercel Git integration or
+  zero-config Express (builds from source on Vercel).
+- **Not verified yet**: the first real deploy. Nothing here has run against Vercel; T020 proves it.
+- **Monetization**: Hobby is non-commercial only. Mostafa plans paid plans later; before the first
+  paid feature ships, the service moves to another host; MarkMe never pays Vercel (A54). The
+  Dockerfile keeps that move cheap.
+
 ## R17. `workflow_dispatch` only works once the workflow file is on `main` (found in `/speckit-tasks`)
 
 - **Finding**: GitHub runs `workflow_dispatch` (UI or `gh workflow run`) only for workflow files
@@ -365,8 +394,8 @@ this change (v1.9), as its change rule requires.
   - On `main` the file does nothing until the repository variables exist. Its `push` path filter
     (`apps/preview-api/**`, `packages/domain/**`, `pnpm-lock.yaml`) does not match the workflow
     file itself.
-  - After that, the exit check dispatches it with `ref: 004-m3-preview-api`. The WIF condition
-    already accepts `refs/heads/NNN-*` (A47).
+  - After that, the exit check dispatches it with `ref: 004-m3-preview-api`. The workflow's
+    branch guard accepts `refs/heads/NNN-*` (R18; it replaced the WIF condition of A47).
 - **Alternatives considered**: Add `push` on `NNN-*` branches (deploys every milestone push, not
   approved in A47); deploy by hand with `gcloud` from the laptop (skips the CI path the exit check
   is meant to prove); defer the cloud exit check until after the merge (breaks "merge only when

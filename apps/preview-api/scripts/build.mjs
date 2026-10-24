@@ -7,12 +7,16 @@ const packageRoot = path.join(import.meta.dirname, "..");
 await rm(path.join(packageRoot, "dist"), { recursive: true, force: true });
 
 await esbuild.build({
-  entryPoints: [path.join(packageRoot, "src/server.ts")],
+  entryPoints: {
+    server: path.join(packageRoot, "src/server.ts"),
+    "vercel/index": path.join(packageRoot, "src/vercel.ts"),
+  },
   bundle: true,
   platform: "node",
   target: "node24",
   format: "esm",
-  outfile: path.join(packageRoot, "dist/server.mjs"),
+  outdir: path.join(packageRoot, "dist"),
+  outExtension: { ".js": ".mjs" },
   banner: {
     js: 'import { createRequire } from "node:module"; const require = createRequire(import.meta.url);',
   },
