@@ -52,22 +52,23 @@ The preview API serves `http://127.0.0.1:8787` (see the `[dev]` summary).
 
 ### Get a local access token
 
-Use the anon key from `pnpm exec supabase status --workdir packages/database` (field
-`ANON_KEY`). Sign up a test user (confirm in Mailpit at `http://127.0.0.1:54324` if needed),
-then take `access_token` from the password grant:
+Use `PUBLISHABLE_KEY` from `pnpm exec supabase status --workdir packages/database`. Sign up a
+test user (confirm in Mailpit at `http://127.0.0.1:54324` if needed), then take `access_token`
+from the password grant. Send the publishable key only in the `apikey` header; put only the user's
+access token in `Authorization: Bearer`, never a project key.
 
 ```bash
-ANON='<ANON_KEY from supabase status>'
+PUBLISHABLE_KEY='<PUBLISHABLE_KEY from supabase status>'
 EMAIL='you@example.com'
 PASSWORD='your-test-password'
 
 curl -s -X POST 'http://127.0.0.1:54321/auth/v1/signup' \
-  -H "apikey: $ANON" -H "Authorization: Bearer $ANON" \
+  -H "apikey: $PUBLISHABLE_KEY" \
   -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}"
 
 TOKEN=$(curl -s -X POST 'http://127.0.0.1:54321/auth/v1/token?grant_type=password' \
-  -H "apikey: $ANON" -H "Authorization: Bearer $ANON" \
+  -H "apikey: $PUBLISHABLE_KEY" \
   -H 'Content-Type: application/json' \
   -d "{\"email\":\"$EMAIL\",\"password\":\"$PASSWORD\"}" \
   | jq -r .access_token)

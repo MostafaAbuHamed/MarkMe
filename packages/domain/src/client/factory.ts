@@ -9,7 +9,7 @@ export interface AuthStorage {
 
 export interface CreateMarkMeClientOptions {
   url: string;
-  anonKey: string;
+  publishableKey: string;
   storage: AuthStorage;
   detectSessionInUrl?: boolean;
 }
@@ -18,11 +18,11 @@ export type MarkMeClient = SupabaseClient<Database>;
 
 export function createMarkMeClient({
   url,
-  anonKey,
+  publishableKey,
   storage,
   detectSessionInUrl = false,
 }: CreateMarkMeClientOptions): MarkMeClient {
-  return createClient<Database>(url, anonKey, {
+  return createClient<Database>(url, publishableKey, {
     auth: {
       storage,
       flowType: "pkce",
