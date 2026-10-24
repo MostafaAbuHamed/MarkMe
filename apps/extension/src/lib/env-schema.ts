@@ -7,8 +7,7 @@ export const extensionEnvSchema = z.object({
     .describe("an http(s) URL, e.g. http://127.0.0.1:54321"),
   WXT_SUPABASE_PUBLISHABLE_KEY: z
     .string()
-    .min(20)
-    .refine((value) => !value.startsWith("replace-with-"))
+    .regex(/^sb_publishable_[A-Za-z0-9_-]{20,}$/)
     .describe("a publishable key (sb_publishable_…) printed by `pnpm exec supabase status`"),
   WXT_PREVIEW_API_URL: z
     .url({ protocol: /^https?$/ })
