@@ -1,22 +1,40 @@
+import { previewRequest } from "@markme/domain";
 import { createRemoteJWKSet, type JWTVerifyGetKey } from "jose";
 import express, { type Express, type NextFunction, type Request, type Response } from "express";
 
+import { createAuth } from "./auth.js";
+import { createPreviewCache } from "./cache.js";
 import { createCors } from "./cors.js";
-import { sendError } from "./errors.js";
+import { PreviewFailure, sendError } from "./errors.js";
 import type { PreviewApiEnv } from "./env.js";
 import { createRequestLog, defaultLogWriter, type LogWriter } from "./log.js";
+import { createAdapters } from "./oembed/index.js";
+import { createPipeline } from "./pipeline.js";
+import { isBlockedAddress } from "./ssrf/ip-policy.js";
+import { dnsResolve } from "./ssrf/resolve.js";
+import { createSafeFetch, type SafeFetch } from "./ssrf/safe-fetch.js";
 
 export type AppOptions = {
   env: PreviewApiEnv;
   jwks?: JWTVerifyGetKey;
+  safeFetch?: SafeFetch;
   log?: LogWriter;
   routes?: (app: Express) => void;
 };
 
-export function createApp({ env, jwks, log, routes }: AppOptions): Express {
+export function createApp({ env, jwks, safeFetch, log, routes }: AppOptions): Express {
   const resolvedJwks =
     jwks ?? createRemoteJWKSet(new URL("/auth/v1/.well-known/jwks.json", env.SUPABASE_URL));
-  void resolvedJwks;
+  const resolvedSafeFetch =
+    safeFetch ?? createSafeFetch({ resolve: dnsResolve, policy: isBlockedAddress });
+  const adapters = createAdapters(env);
+  const cache = createPreviewCache();
+  const pipeline = createPipeline({
+    safeFetch: resolvedSafeFetch,
+    adapters,
+    cache,
+  });
+  const auth = createAuth({ jwks: resolvedJwks, issuer: `${env.SUPABASE_URL}/auth/v1` });
 
   const app = express();
   app.disable("x-powered-by");
@@ -32,6 +50,28 @@ export function createApp({ env, jwks, log, routes }: AppOptions): Express {
   });
 
   routes?.(app);
+
+  app.post("/v1/preview", auth, async (req, res, next) => {
+    const parsed = previewRequest.safeParse(req.body);
+    if (!parsed.success) {
+      sendError(res, "invalid_url");
+      return;
+    }
+
+    res.locals.host = new URL(parsed.data.url.url).hostname;
+
+    try {
+      const result = await pipeline(parsed.data);
+      res.locals.cacheHit = result.cacheHit;
+      res.json(result.preview);
+    } catch (error: unknown) {
+      if (error instanceof PreviewFailure) {
+        sendError(res, error.code);
+        return;
+      }
+      next(error);
+    }
+  });
 
   app.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
     if (res.headersSent) {
