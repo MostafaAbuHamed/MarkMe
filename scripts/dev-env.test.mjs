@@ -18,7 +18,13 @@ const SECRET_KEY = "fake-secret-key-SENTINEL";
 const SERVICE_ROLE_KEY = "fake-service-role-SENTINEL";
 const STUDIO_URL = "http://127.0.0.1:54323";
 
-const privilegedValues = [SERVICE_ROLE_KEY, SECRET_KEY, JWT_SECRET, S3_PROTOCOL_ACCESS_KEY_SECRET];
+const privilegedValues = [
+  ANON_KEY,
+  SERVICE_ROLE_KEY,
+  SECRET_KEY,
+  JWT_SECRET,
+  S3_PROTOCOL_ACCESS_KEY_SECRET,
+];
 
 const statusPairs = [
   ["ANON_KEY", ANON_KEY],
@@ -70,25 +76,26 @@ const previewExample = [
 const extensionExample = [
   "# Extension local config. Public keys only.",
   "WXT_SUPABASE_URL=http://127.0.0.1:54321",
-  "WXT_SUPABASE_ANON_KEY=replace-with-local-anon-key",
+  "WXT_SUPABASE_PUBLISHABLE_KEY=replace-with-local-publishable-key",
   "WXT_PREVIEW_API_URL=http://127.0.0.1:8787",
   "",
 ].join("\n");
 
 describe("parseStatusEnv", () => {
-  it("returns only API_URL and ANON_KEY from a status env fixture", () => {
+  it("returns only API_URL and PUBLISHABLE_KEY from a status env fixture", () => {
     const result = parseStatusEnv(quotedStatus(statusPairs));
 
     expect(result).toEqual({
       API_URL: "http://127.0.0.1:54321",
-      ANON_KEY: "fake-anon-key",
+      PUBLISHABLE_KEY: "sb_publishable_fake",
     });
   });
 
   it("parses unquoted values", () => {
     const text = [
       "API_URL=http://127.0.0.1:54321",
-      "ANON_KEY=unquoted-anon-key",
+      "PUBLISHABLE_KEY=unquoted-publishable-key",
+      "ANON_KEY=fake-anon-key",
       "SERVICE_ROLE_KEY=fake-service-role-SENTINEL",
       "JWT_SECRET=fake-jwt-secret-SENTINEL",
       "",
@@ -96,18 +103,18 @@ describe("parseStatusEnv", () => {
 
     expect(parseStatusEnv(text)).toEqual({
       API_URL: "http://127.0.0.1:54321",
-      ANON_KEY: "unquoted-anon-key",
+      PUBLISHABLE_KEY: "unquoted-publishable-key",
     });
   });
 
-  it("names ANON_KEY and omits every status value when ANON_KEY is missing", () => {
-    const text = quotedStatus(statusPairs.filter(([key]) => key !== "ANON_KEY"));
+  it("names PUBLISHABLE_KEY and omits every status value when PUBLISHABLE_KEY is missing", () => {
+    const text = quotedStatus(statusPairs.filter(([key]) => key !== "PUBLISHABLE_KEY"));
     const error = captureError(() => parseStatusEnv(text));
 
-    expect(error.message).toContain("ANON_KEY");
+    expect(error.message).toContain("PUBLISHABLE_KEY");
     expectMessageOmits(
       error.message,
-      statusPairs.filter(([key]) => key !== "ANON_KEY").map(([, value]) => value),
+      statusPairs.filter(([key]) => key !== "PUBLISHABLE_KEY").map(([, value]) => value),
     );
   });
 
@@ -126,7 +133,7 @@ describe("parseStatusEnv", () => {
 describe("appEnvValues", () => {
   const status = {
     API_URL: "http://10.1.2.3:54321",
-    ANON_KEY: "anon-from-status",
+    PUBLISHABLE_KEY: "publishable-from-status",
   };
 
   it("maps preview-api to SUPABASE_URL from API_URL", () => {
@@ -138,7 +145,7 @@ describe("appEnvValues", () => {
   it("maps the extension to the public Supabase keys and the local preview URL", () => {
     expect(appEnvValues("extension", status)).toEqual({
       WXT_SUPABASE_URL: "http://10.1.2.3:54321",
-      WXT_SUPABASE_ANON_KEY: "anon-from-status",
+      WXT_SUPABASE_PUBLISHABLE_KEY: "publishable-from-status",
       WXT_PREVIEW_API_URL: "http://127.0.0.1:8787",
     });
   });
@@ -196,7 +203,7 @@ describe("fillExample", () => {
       [
         "# Extension local config. Public keys only.",
         "WXT_SUPABASE_URL=http://127.0.0.1:54321",
-        "WXT_SUPABASE_ANON_KEY=fake-anon-key",
+        "WXT_SUPABASE_PUBLISHABLE_KEY=sb_publishable_fake",
         "WXT_PREVIEW_API_URL=http://127.0.0.1:8787",
         "",
       ].join("\n"),
@@ -204,6 +211,9 @@ describe("fillExample", () => {
     for (const secret of privilegedValues) {
       expect(filled).not.toContain(secret);
     }
+    expect(filled).not.toContain("ANON_KEY");
+    expect(filled).not.toContain("SERVICE_ROLE_KEY");
+    expect(filled).not.toContain("SECRET_KEY");
   });
 });
 
