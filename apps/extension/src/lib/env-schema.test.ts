@@ -44,6 +44,29 @@ describe("loadExtensionEnv", () => {
     });
   });
 
+  it("reports WXT_SUPABASE_PUBLISHABLE_KEY missing when only the old anon key is set", () => {
+    const oldAnonValue = "SENTINEL-old-anon-e5";
+    const error = captureEnvError({
+      WXT_SUPABASE_URL: SUPABASE_URL,
+      WXT_SUPABASE_ANON_KEY: oldAnonValue,
+      WXT_PREVIEW_API_URL: PREVIEW_API_URL,
+    });
+
+    expect(error.issues).toEqual([
+      {
+        key: "WXT_SUPABASE_PUBLISHABLE_KEY",
+        kind: "missing",
+        expected: PUBLISHABLE_KEY_EXPECTED,
+      },
+    ]);
+    expect(error.message).toMatch(
+      /Copy apps\/extension\/\.env\.example to apps\/extension\/\.env and fill in the values\.$/,
+    );
+    expect(error.message).not.toContain(oldAnonValue);
+    expect(String(error)).not.toContain(oldAnonValue);
+    expect(JSON.stringify(error)).not.toContain(oldAnonValue);
+  });
+
   it.each([
     ["WXT_SUPABASE_URL", SUPABASE_URL_EXPECTED],
     ["WXT_SUPABASE_PUBLISHABLE_KEY", PUBLISHABLE_KEY_EXPECTED],
@@ -73,6 +96,22 @@ describe("loadExtensionEnv", () => {
       PUBLISHABLE_KEY_EXPECTED,
     ],
     ["WXT_SUPABASE_PUBLISHABLE_KEY", "short", PUBLISHABLE_KEY_EXPECTED],
+    [
+      "WXT_SUPABASE_PUBLISHABLE_KEY",
+      "eyJhbGciOiJIUzI1NiJ9.fake.fake-signature",
+      PUBLISHABLE_KEY_EXPECTED,
+    ],
+    [
+      "WXT_SUPABASE_PUBLISHABLE_KEY",
+      "sb_secret_test_00000000000000000000",
+      PUBLISHABLE_KEY_EXPECTED,
+    ],
+    ["WXT_SUPABASE_PUBLISHABLE_KEY", "sb_publishable_short", PUBLISHABLE_KEY_EXPECTED],
+    [
+      "WXT_SUPABASE_PUBLISHABLE_KEY",
+      "sb_publishable_has spaces_000000000000",
+      PUBLISHABLE_KEY_EXPECTED,
+    ],
   ] as const)("reports %s %j as invalid", (key, value, expected) => {
     const error = captureEnvError({ ...validSource, [key]: value });
 
@@ -119,6 +158,25 @@ describe("loadExtensionEnv", () => {
         "Copy apps/extension/.env.example to apps/extension/.env and fill in the values.",
       ].join("\n"),
     );
+  });
+
+  it("omits a refused secret-shaped publishable key from the error", () => {
+    const sentinelKey = "sb_secret_SENTINEL-key-d4-000000000000";
+    const error = captureEnvError({
+      ...validSource,
+      WXT_SUPABASE_PUBLISHABLE_KEY: sentinelKey,
+    });
+
+    expect(error.issues).toEqual([
+      {
+        key: "WXT_SUPABASE_PUBLISHABLE_KEY",
+        kind: "invalid",
+        expected: PUBLISHABLE_KEY_EXPECTED,
+      },
+    ]);
+    expect(error.message).not.toContain(sentinelKey);
+    expect(String(error)).not.toContain(sentinelKey);
+    expect(JSON.stringify(error)).not.toContain(sentinelKey);
   });
 
   it("omits invalid source values from the error", () => {

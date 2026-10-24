@@ -293,6 +293,11 @@ quickstart L4 and L5 (real build passes, planted secret and anon keys fail, no k
 planted-secret.js`, `legacy-jwt-anon in planted-anon.js`, exit 1, no key text).
   - **Done when**: all expected outputs match. Record the date and results under this task.
   - **Commit**: none (record lands with the PR's last commit, or in T015).
+  - **Result (2026-10-24)**: extension tests 18/18. L4: build exits 1 with
+    `WXT_SUPABASE_PUBLISHABLE_KEY: missing` and the `.env.example` hint; `.env` not rewritten. L5:
+    production build passes, `bundle-secrets: no findings` (exit 0, so `supabase-js`'s bare
+    `"sb_secret_"` is not flagged and `SERVICE_ROLE` is absent); planted copy gives
+    `legacy-jwt-anon in planted-anon.js`, `secret-key in planted-secret.js`, exit 1, no key text.
 
 **Checkpoint**: open PR 2 (`keys/us2-reject-wrong` → `005-supabase-api-keys`).
 
